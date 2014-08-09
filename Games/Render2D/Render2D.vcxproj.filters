@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\Render2D.cpp" />
+    <ClCompile Include="Source\LodePNG\lodepng.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Render2D.h" />
+    <ClInclude Include="Source\DXHelper.h" />
+    <ClInclude Include="Source\LodePNG\lodepng.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Source\Shaders\HLSL\psBasic.hlsl" />
+    <FxCompile Include="Source\Shaders\HLSL\vsBasic.hlsl" />
+  </ItemGroup>
+</Project>

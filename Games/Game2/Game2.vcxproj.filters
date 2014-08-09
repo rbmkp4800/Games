@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\types.h" />
+    <ClInclude Include="Source\Game2.h" />
+    <ClInclude Include="Source\DXHelper.h" />
+    <ClInclude Include="Source\Render.h" />
+    <ClInclude Include="Source\Math.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Window.cpp" />
+    <ClCompile Include="Source\Core.cpp" />
+    <ClCompile Include="Source\Render.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Source\Shaders\HLSL\vsPosTex.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Source\Shaders\HLSL\psPosTex.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Source\Shaders\HLSL\vsPosNorm.hlsl" />
+    <FxCompile Include="Source\Shaders\HLSL\psPosNorm.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="HLSL">
+      <UniqueIdentifier>{ca9af3f2-48f3-47cd-861d-4e3b6e77c0ff}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\Shaders\HLSL\vsGlobal.hlsli" />
+  </ItemGroup>
+</Project>

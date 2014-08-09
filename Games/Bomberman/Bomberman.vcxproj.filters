@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\Bomberman.Characters.h" />
+    <ClInclude Include="Source\Bomberman.Field.h" />
+    <ClInclude Include="Source\Bomberman.GameObjects.h" />
+    <ClInclude Include="Source\Bomberman.h" />
+    <ClInclude Include="Source\Bomberman.SmartAllocator.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\Characters.cpp" />
+    <ClCompile Include="Source\Core.cpp" />
+    <ClCompile Include="Source\Explosions.cpp" />
+    <ClCompile Include="Source\FieldChunk.cpp" />
+    <ClCompile Include="Source\GameBase.cpp" />
+    <ClCompile Include="Source\GameObjects.cpp" />
+    <ClCompile Include="Source\GameObjectsController.cpp" />
+    <ClCompile Include="Source\GameTimer.cpp" />
+    <ClCompile Include="Source\ManagedInterface.cpp" />
+    <ClCompile Include="Source\Resources.cpp" />
+    <ClCompile Include="Source\SmartAllocator.cpp" />
+    <ClCompile Include="Source\main.cpp" />
+  </ItemGroup>
+</Project>

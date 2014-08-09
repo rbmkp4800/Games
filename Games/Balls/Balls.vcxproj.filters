@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\Timer.cpp" />
+    <ClCompile Include="Source\BallsGame.cpp" />
+    <ClCompile Include="Source\Textures.cpp" />
+    <ClCompile Include="Source\GameObjects.cpp" />
+    <ClCompile Include="Source\GameObjectsController.cpp" />
+    <ClCompile Include="Source\Window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\BallsGame.h" />
+    <ClInclude Include="Source\BallsGame.Interface.h" />
+    <ClInclude Include="Source\Timer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Textures\ballMask.png" />
+    <Image Include="Textures\bgMask.png" />
+    <Image Include="Textures\blueWave.png" />
+    <Image Include="Textures\redWave.png" />
+  </ItemGroup>
+</Project>

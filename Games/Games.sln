@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Game2", "Game2\Game2.vcxproj", "{CEBD20B1-238F-479B-B698-C29FFF72CAC1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Render2D", "Render2D\Render2D.vcxproj", "{2D9B820F-BC95-4CB2-9222-3574F25F55BD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bomberman", "Bomberman\Bomberman.vcxproj", "{D1E9BF49-D699-462C-A2FF-56E67780E913}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{DB2C4092-4F60-43F4-9F56-1EFC22F98F30}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Global", "Global", "{3E4F96C2-3E29-42BB-B857-E10208D18BE7}"
+	ProjectSection(SolutionItems) = preProject
+		Global\extypes.h = Global\extypes.h
+		Global\extypes.matrix3x2.h = Global\extypes.matrix3x2.h
+		Global\extypes.matrix4x4.h = Global\extypes.matrix4x4.h
+		Global\extypes.util.h = Global\extypes.util.h
+		Global\extypes.vectors.h = Global\extypes.vectors.h
+		Global\extypes.vectors.math.h = Global\extypes.vectors.math.h
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Balls", "Balls\Balls.vcxproj", "{033E4B9D-13F0-4EFF-AA00-D26242F892FC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CEBD20B1-238F-479B-B698-C29FFF72CAC1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CEBD20B1-238F-479B-B698-C29FFF72CAC1}.Debug|Win32.Build.0 = Debug|Win32
+		{CEBD20B1-238F-479B-B698-C29FFF72CAC1}.Release|Win32.ActiveCfg = Release|Win32
+		{CEBD20B1-238F-479B-B698-C29FFF72CAC1}.Release|Win32.Build.0 = Release|Win32
+		{2D9B820F-BC95-4CB2-9222-3574F25F55BD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2D9B820F-BC95-4CB2-9222-3574F25F55BD}.Debug|Win32.Build.0 = Debug|Win32
+		{2D9B820F-BC95-4CB2-9222-3574F25F55BD}.Release|Win32.ActiveCfg = Release|Win32
+		{2D9B820F-BC95-4CB2-9222-3574F25F55BD}.Release|Win32.Build.0 = Release|Win32
+		{D1E9BF49-D699-462C-A2FF-56E67780E913}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D1E9BF49-D699-462C-A2FF-56E67780E913}.Debug|Win32.Build.0 = Debug|Win32
+		{D1E9BF49-D699-462C-A2FF-56E67780E913}.Release|Win32.ActiveCfg = Release|Win32
+		{D1E9BF49-D699-462C-A2FF-56E67780E913}.Release|Win32.Build.0 = Release|Win32
+		{DB2C4092-4F60-43F4-9F56-1EFC22F98F30}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DB2C4092-4F60-43F4-9F56-1EFC22F98F30}.Debug|Win32.Build.0 = Debug|Win32
+		{DB2C4092-4F60-43F4-9F56-1EFC22F98F30}.Release|Win32.ActiveCfg = Release|Win32
+		{DB2C4092-4F60-43F4-9F56-1EFC22F98F30}.Release|Win32.Build.0 = Release|Win32
+		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Debug|Win32.Build.0 = Debug|Win32
+		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Release|Win32.ActiveCfg = Release|Win32
+		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
