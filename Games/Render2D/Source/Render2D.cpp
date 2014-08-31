@@ -17,7 +17,7 @@ using namespace DXHelper;
 Render::DXResources Render::dx = { 0 };
 Render::VSCBTransform Render::vscbTransform;
 
-VertexBasic* Render::vertexBuffer = nullptr;
+VertexBasic Render::vertexBuffer[Render::vertexLimit];
 uint32 Render::vertexCount = 0;
 ID3D11RenderTargetView *Render::d3dRenderTargetView = nullptr;
 ID3D11ShaderResourceView *Render::d3dTextureSlotsSRVBuffer[Render::textureSlotsCount] = { 0 };
@@ -61,7 +61,7 @@ void Render::Init()
 	}
 	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(indexBuffer), D3D11_BIND_INDEX_BUFFER),
 		&D3D11SubresourceData(indexBuffer), &dx.d3dIndexBuffer);
-	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(vertexBufferSize, D3D11_BIND_VERTEX_BUFFER), nullptr, &dx.d3dVertexBuffer);
+	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(VertexBasic) * vertexLimit, D3D11_BIND_VERTEX_BUFFER), nullptr, &dx.d3dVertexBuffer);
 	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(VSCBTransform), D3D11_BIND_CONSTANT_BUFFER), nullptr, &dx.d3dVSCBTransform);
 
 	dx.d3dDevice->CreateRasterizerState(&D3D11RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE), &dx.d3dRasterizerState);
@@ -82,8 +82,6 @@ void Render::Init()
 	dx.d3dContext->RSSetState(dx.d3dRasterizerState);
 	SetSamplerMode(SamplerMode::Default);
 	SetBlendState(BlendState::Default);
-
-	vertexBuffer = (VertexBasic*) malloc(vertexBufferSize);
 }
 
 inline Render::VSCBTransform::VSCBTransform()
@@ -230,14 +228,6 @@ void Render::SetBlendState(BlendState state)
 	}
 	lastBlendState = state;
 }
-void Render::SetEnableIndexation(bool state)
-{
-	if (indexationEnabled != state)
-	{
-		Flush();
-		indexationEnabled = state;
-	}
-}
 
 //--------------------------------Interfaces----------------------------------//
 
@@ -297,7 +287,7 @@ bool Texture::CreateFromPng(wchar_t* filename)
 {
 	HANDLE hFile = CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
 	if (hFile == INVALID_HANDLE_VALUE)
-		throw;
+		return false;
 
 	FILE_STANDARD_INFO fileInfo;
 	GetFileInformationByHandleEx(hFile, FileStandardInfo, &fileInfo, sizeof(FILE_STANDARD_INFO));
@@ -382,7 +372,8 @@ bool SwapChain::Resize(uint32 x, uint32 y)
 }
 void SwapChain::Present(bool sync)
 {
-	dxgiSwapChain->Present(sync ? 1 : 0, 0);
+	if (dxgiSwapChain)
+		dxgiSwapChain->Present(sync ? 1 : 0, 0);
 }
 SwapChain::~SwapChain()
 {

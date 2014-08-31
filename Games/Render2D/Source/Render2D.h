@@ -87,40 +87,14 @@ namespace Render2D
 		inline coloru32(uint8 _r, uint8 _g, uint8 _b, uint8 _a = 0xff) : r(_r), g(_g), b(_b), a(_a) {}
 		inline void set(uint8 _r, uint8 _g, uint8 _b, uint8 _a = 0xff) { r = _r; g = _g; b = _b; a = _a; }
 		inline void set(uint32 rgb, uint8 _a = 0xff) { rgba = rgb & 0xffffff | _a << 24; }
-		inline float32x4 toFloat4() { return float32x4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f); }
-		inline void toFloat4(float* result)
+		inline float32x4 toFloat4Unorm() { return float32x4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f); }
+		inline void toFloat4Unorm(float* result)
 		{
 			result[0] = r / 255.0f;
 			result[1] = g / 255.0f;
 			result[2] = b / 255.0f;
 			result[3] = a / 255.0f;
 		}
-	};
-
-	struct float32x2_nc
-	{
-		float x, y;
-		inline void set(float _x, float _y) { x = _x; y = _y; }
-	};
-	struct float32x4_nc
-	{
-		float x, y, z, w;
-		inline void set(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
-	};
-
-	struct VertexBasic
-	{
-		float32x2 pos;
-		union
-		{
-			float32x4_nc color;
-			struct
-			{
-				float32x2_nc tex;
-				float ext;
-				float opacity;
-			};
-		};
 	};
 
 	//--------------------------------Interfaces----------------------------------//
@@ -396,11 +370,6 @@ namespace Render2D
 		friend SwapChain;
 
 	private:
-		static const int32 vertexBufferSize = 1 << 17;
-		static const int32 vertexLimit = vertexBufferSize / sizeof(VertexBasic);
-		static const int32 indexedPrimitivesLimit = vertexLimit / 2;
-		static const int32 textureSlotsCount = 4;
-
 		struct DXResources
 		{
 			ID3D11Device2 *d3dDevice;
@@ -430,7 +399,44 @@ namespace Render2D
 			inline VSCBTransform();
 		} static vscbTransform;
 
-		static VertexBasic *vertexBuffer;
+		struct VertexColor		//24 bytes
+		{
+			float32x2 pos;
+			float32x4 color;
+		};
+		struct VertexTex		//24 bytes
+		{
+			float32x2 pos;
+			float32x2 tex;
+			float opactity;
+			float texIdx;
+		};
+		struct VertexEllipse	//36 bytes
+		{
+			float32x2 pos;
+			float32x2 tex;
+			float32x4 color;
+			float innerRadius;
+		};
+
+		static const uint32 vertexBufferPageSize = 1 << 12;
+		static const uint32 vertexBufferPagesCount = 1 << 6;
+		static const uint32 verticesColorPerPage = vertexBufferPageSize / sizeof(VertexColor);
+		static const uint32 verticesTexPerPage = vertexBufferPageSize / sizeof(VertexTex);
+		static const uint32 verticesEllipsePerPage = vertexBufferPageSize / sizeof(VertexEllipse);
+
+		static const uint32 indexedPrimitivesLimit = vertexLimit / 2;
+		static const uint32 textureSlotsCount = 4;
+
+		union VertexBufferPage
+		{
+			uint8 raw[vertexBufferPageSize];
+			VertexColor vertexColorBuffer[verticesColorPerPage];
+			VertexTex vertexTexBuffer[verticesTexPerPage];
+			VertexEllipse vertexEllipseBuffer[verticesEllipsePerPage];
+		};
+
+		static VertexBufferPage vertexBuffer[vertexBufferPagesCount];
 		static uint32 vertexCount;
 		static ID3D11RenderTargetView *d3dRenderTargetView;
 		static ID3D11ShaderResourceView *d3dTextureSlotsSRVBuffer[textureSlotsCount];
@@ -472,7 +478,14 @@ namespace Render2D
 
 		static void SetSamplerMode(SamplerMode mode);
 		static void SetBlendState(BlendState state);
-		static void SetEnableIndexation(bool state);
+		inline static void EnableIndexation(bool state)
+		{
+			if (indexationEnabled != state)
+			{
+				Flush();
+				indexationEnabled = state;
+			}
+		}
 
 		template <bool swapSrcDim = false>
 		static inline void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, rectf32* srcRect = nullptr, float opacity = 1.0f)
@@ -576,7 +589,7 @@ namespace Render2D
 		static inline void DrawFillRect(rectf32* destRect, coloru32 color)
 		{
 			float32x4_nc colorf;
-			color.toFloat4((float*) &colorf);
+			color.toFloat4Unorm((float*) &colorf);
 			if (indexationEnabled)
 			{
 				if (vertexCount + 4 > vertexLimit)
@@ -601,7 +614,7 @@ namespace Render2D
 		static inline void DrawLine(float32x2 start, float32x2 end, coloru32 color, float width = 1.0f)
 		{
 			float32x4_nc colorf;
-			color.toFloat4((float*) &colorf);
+			color.toFloat4Unorm((float*) &colorf);
 			if (indexationEnabled)
 			{
 				if (vertexCount + 4 > vertexLimit)
@@ -629,7 +642,7 @@ namespace Render2D
 				return;
 
 			float32x4_nc colorf;
-			color.toFloat4((float*) &colorf);
+			color.toFloat4Unorm((float*) &colorf);
 			if (vertexCount + 3 > vertexLimit)
 				Flush();
 			VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
@@ -643,7 +656,7 @@ namespace Render2D
 		static inline void DrawQuadrangle(float32x2* vertices, coloru32 color)
 		{
 			float32x4_nc colorf;
-			color.toFloat4((float*) &colorf);
+			color.toFloat4Unorm((float*) &colorf);
 			if (indexationEnabled)
 			{
 				if (vertexCount + 4 > vertexLimit)

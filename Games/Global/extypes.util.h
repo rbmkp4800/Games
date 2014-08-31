@@ -22,7 +22,7 @@ inline type clamp(type val, type _min, type _max)
 template <typename type>
 inline type saturate(type val) { return clamp(val, (type) 0, (type) 1); }
 template <typename type>
-inline type sqr(register type a) { return a * a; }
+inline type sqrval(type a) { return a * a; }
 template <typename type, typename _type>
 inline type intdivceil(type val, _type div) { return (type) ((val - 1) / div + 1); }
 

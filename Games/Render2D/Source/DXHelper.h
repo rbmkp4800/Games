@@ -6,8 +6,10 @@ namespace DXHelper
 	inline void SafeComObjectRelease(ComInterface& object)
 	{
 		if (object)
+		{
 			object->Release();
-		object = nullptr;
+			object = nullptr;
+		}
 	}
 
 	inline D3D11_TEXTURE2D_DESC D3D11Texture2DDesc(uint32 width, uint32 height, uint32 bingFlags,
