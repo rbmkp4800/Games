@@ -5,22 +5,9 @@
 #include <extypes.matrix3x2.h>
 
 struct IUnknown;
-
-struct ID3D11Device2;
-struct ID3D11DeviceContext2;
-struct ID3D11InputLayout;
-struct ID3D11VertexShader;
-struct ID3D11PixelShader;
-struct ID3D11Buffer;
-struct ID3D11BlendState;
-struct ID3D11SamplerState;
-struct ID3D11RasterizerState;
 struct ID3D11RenderTargetView;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
-
-struct IDXGIFactory3;
-struct IDXGIDevice1;
 struct IDXGISwapChain1;
 
 namespace Render2D
@@ -370,46 +357,16 @@ namespace Render2D
 		friend SwapChain;
 
 	private:
-		struct DXResources
-		{
-			ID3D11Device2 *d3dDevice;
-			ID3D11DeviceContext2 *d3dContext;
-			IDXGIFactory3 *dxgiFactory;
-			IDXGIDevice1 *dxgiDevice;
-
-			ID3D11InputLayout *d3dILBasic;
-			ID3D11VertexShader *d3dVSBasic;
-			ID3D11PixelShader *d3dPSBasic;
-			ID3D11Buffer *d3dVertexBuffer, *d3dIndexBuffer, *d3dVSCBTransform;
-			ID3D11BlendState *d3dBlendStateAlpha, *d3dBlendStateClear;
-			ID3D11SamplerState *d3dSamplerStateLinearMirrorOnce, *d3dSamplerStateLinearWrap;
-			ID3D11RasterizerState *d3dRasterizerState;
-		} static dx;
-
-		struct VSCBTransform
-		{
-			float32x3 transformMatrixRow1;
-			uint32 _padding1;
-			float32x3 transformMatrixRow2;
-			uint32 _padding2;
-			float32x2 scale;
-			uint32 _padding3, _padding4;
-
-			inline void setTransformMatrix(const matrix3x2& matrix);
-			inline VSCBTransform();
-		} static vscbTransform;
-
 		struct VertexColor		//24 bytes
 		{
 			float32x2 pos;
 			float32x4 color;
 		};
-		struct VertexTex		//24 bytes
+		struct VertexTex		//20 bytes
 		{
 			float32x2 pos;
 			float32x2 tex;
 			float opactity;
-			float texIdx;
 		};
 		struct VertexEllipse	//36 bytes
 		{
@@ -419,14 +376,14 @@ namespace Render2D
 			float innerRadius;
 		};
 
+		static const uint32 vertexBufferLayersCount = 4;
 		static const uint32 vertexBufferPageSize = 1 << 12;
-		static const uint32 vertexBufferPagesCount = 1 << 6;
+		static const uint32 vertexBufferPagesCount = 1 << 6;	//limit - uint8 max
 		static const uint32 verticesColorPerPage = vertexBufferPageSize / sizeof(VertexColor);
 		static const uint32 verticesTexPerPage = vertexBufferPageSize / sizeof(VertexTex);
 		static const uint32 verticesEllipsePerPage = vertexBufferPageSize / sizeof(VertexEllipse);
 
-		static const uint32 indexedPrimitivesLimit = vertexLimit / 2;
-		static const uint32 textureSlotsCount = 4;
+		static_assert(vertexBufferPagesCount <= UINT8_MAX, "page idx can't be larger then uint8");
 
 		union VertexBufferPage
 		{
@@ -435,33 +392,28 @@ namespace Render2D
 			VertexTex vertexTexBuffer[verticesTexPerPage];
 			VertexEllipse vertexEllipseBuffer[verticesEllipsePerPage];
 		};
-
 		static VertexBufferPage vertexBuffer[vertexBufferPagesCount];
-		static uint32 vertexCount;
-		static ID3D11RenderTargetView *d3dRenderTargetView;
-		static ID3D11ShaderResourceView *d3dTextureSlotsSRVBuffer[textureSlotsCount];
-		static bool indexationEnabled;
 
-		static inline void setDeviceStates(ID3D11InputLayout *_d3dInputLayout, ID3D11VertexShader *_d3dVertexShader,
-			ID3D11PixelShader *_d3dPixelShader, uint32 _vertexBufferStride);
-		static inline int32 pushTextureInSlot(ID3D11ShaderResourceView* d3dSRV)
+		struct VertexBufferLayerDesc
 		{
-			for (int32 i = 0; i < textureSlotsCount; i++)
+			static const uint32 texSegmentsLimit = 1 << 4;
+			static const uint32 pagesPerTexSegmentLimit = 1 << 4;
+			static const uint32 pagesPerColorSegmentLimit = 1 << 6;
+			static const uint32 pagesPerEllipseSegmentLimit = 1 << 6;
+
+			struct TexSegment
 			{
-				if (d3dTextureSlotsSRVBuffer[i] == d3dSRV)
-				{
-					return i;
-				}
-				else if (!d3dTextureSlotsSRVBuffer[i])
-				{
-					d3dTextureSlotsSRVBuffer[i] = d3dSRV;
-					return i;
-				}
-			}
-			Flush();
-			d3dTextureSlotsSRVBuffer[0] = d3dSRV;
-			return 0;
-		}
+				uint8 pages[pagesPerTexSegmentLimit];
+				uint32 vertexCount;
+				ID3D11ShaderResourceView *d3dShaderResourceView;
+			} texSegments[texSegmentsLimit];
+			uint8 colorSegment[pagesPerColorSegmentLimit];
+			uint8 ellipseSegment[pagesPerEllipseSegmentLimit];
+			uint32 colorVertexCount, ellipseVertexCount;
+		};
+		static VertexBufferLayerDesc vertexBufferLayers[vertexBufferLayersCount];
+
+		static bool indexationEnabled;
 
 	public:
 		static void Init();
@@ -487,11 +439,9 @@ namespace Render2D
 			}
 		}
 
-		template <bool swapSrcDim = false>
-		static inline void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, rectf32* srcRect = nullptr, float opacity = 1.0f)
+		static inline void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, rectf32* srcRect = nullptr, float opacity = 1.0f, bool swapDim = false)
 		{
 			if (!bitmap->d3dShaderResourceView) return;
-			float ext = -((float) pushTextureInSlot(bitmap->d3dShaderResourceView) + 0.4f);
 			if (indexationEnabled)
 			{
 				if (vertexCount + 4 > vertexLimit)
@@ -521,9 +471,8 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		template <bool swapSrcDim = false>
 		static inline void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, float startOpacity, float endOpacity,
-			Direction opacityGradientDirection, rectf32* srcRect = nullptr)
+			Direction opacityGradientDirection, rectf32* srcRect = nullptr, bool swapDim = false)
 		{
 			if (!bitmap->d3dShaderResourceView) return;
 			float ext = -((float) pushTextureInSlot(bitmap->d3dShaderResourceView) + 0.4f);

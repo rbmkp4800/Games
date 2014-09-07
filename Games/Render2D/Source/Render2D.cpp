@@ -14,13 +14,36 @@
 using namespace Render2D;
 using namespace DXHelper;
 
-Render::DXResources Render::dx = { 0 };
-Render::VSCBTransform Render::vscbTransform;
+struct DXResources
+{
+	ID3D11Device2 *d3dDevice;
+	ID3D11DeviceContext2 *d3dContext;
+	IDXGIFactory3 *dxgiFactory;
+	IDXGIDevice1 *dxgiDevice;
 
-VertexBasic Render::vertexBuffer[Render::vertexLimit];
-uint32 Render::vertexCount = 0;
-ID3D11RenderTargetView *Render::d3dRenderTargetView = nullptr;
-ID3D11ShaderResourceView *Render::d3dTextureSlotsSRVBuffer[Render::textureSlotsCount] = { 0 };
+	ID3D11InputLayout *d3dILBasic;
+	ID3D11VertexShader *d3dVSBasic;
+	ID3D11PixelShader *d3dPSBasic;
+	ID3D11Buffer *d3dVertexBuffer, *d3dIndexBuffer, *d3dVSCBTransform;
+	ID3D11BlendState *d3dBlendStateAlpha, *d3dBlendStateClear;
+	ID3D11SamplerState *d3dSamplerStateLinearMirrorOnce, *d3dSamplerStateLinearWrap;
+	ID3D11RasterizerState *d3dRasterizerState;
+} static dx = { 0 };
+
+struct VSCBTransform
+{
+	float32x3 transformMatrixRow1;
+	uint32 _padding1;
+	float32x3 transformMatrixRow2;
+	uint32 _padding2;
+	float32x2 scale;
+	uint32 _padding3, _padding4;
+
+	inline void setTransformMatrix(const matrix3x2& matrix);
+	inline VSCBTransform();
+} static vscbTransform;
+
+ID3D11RenderTargetView *d3dRenderTargetView = nullptr;
 bool Render::indexationEnabled = true;
 
 void Render::Init()
