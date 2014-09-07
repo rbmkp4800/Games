@@ -3,6 +3,8 @@
 #ifndef _extypes_def_matrix3x2_
 #define _extypes_def_matrix3x2_
 
+#include "extypes.vectors.h"
+
 #ifndef _extypes_inc_stdmath_
 #define _extypes_inc_stdmath_
 #include <math.h>
@@ -82,9 +84,9 @@ public:
 	}
 	inline void setAsReflection(float x, float y)
 	{
-		float d = sqr(x) + sqr(y);
+		float d = sqrval(x) + sqrval(y);
 		float m = 2.0f * x * y / d;
-		float s = (sqr(x) - sqr(y)) / d;
+		float s = (sqrval(x) - sqrval(y)) / d;
 
 		clear();
 		data[0][0] = s;

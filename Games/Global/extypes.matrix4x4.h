@@ -3,6 +3,8 @@
 #ifndef _extypes_def_matrix4x4_
 #define _extypes_def_matrix4x4_
 
+#include "extypes.vectors.math.h"
+
 #ifndef _extypes_inc_stdmath_
 #define _extypes_inc_stdmath_
 #include <math.h>

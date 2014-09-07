@@ -1,5 +1,4 @@
-#include "types.h"
-#include "Render2D.h"
+#include <Render2D.h>
 
 #define FLAG_UP		0x01
 #define FLAG_DOWN	0x02
@@ -81,7 +80,7 @@ namespace Bomberman
 		static void Shake();
 		static bool Update(uint16 delta);
 		static void ChangeScale(float targetScale, float pitch);
-		static void SetAdditionalTransform(Render2D::matrix3x2& transform);
+		static void SetAdditionalTransform(matrix3x2& transform);
 		static void ResetTransform();
 		//static Render2D::Matrix GetTransform();
 	};

@@ -50,4 +50,6 @@ inline type intdivceil(type val, _type div) { return (type) ((val - 1) / div + 1
 #define max(val1, val2) ((val1) > (val2) ? (val1) : (val2))
 #endif
 
+#define PI 3.141592654f
+
 #endif
