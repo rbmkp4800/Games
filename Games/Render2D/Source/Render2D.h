@@ -1,14 +1,14 @@
 #include <extypes.h>
 #include <extypes.util.h>
 #include <extypes.vectors.h>
-#include <extypes.vectors.math.h>
-#include <extypes.matrix3x2.h>
 
 struct IUnknown;
 struct ID3D11RenderTargetView;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
 struct IDXGISwapChain1;
+
+struct matrix3x2;
 
 namespace Render2D
 {
@@ -199,136 +199,6 @@ namespace Render2D
 		bool Create();
 	};
 
-	//---------------------------------Private--------------------------------------//
-
-	class _private abstract  
-	{
-		friend Render;
-
-	private:
-		template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-		static inline void fillIndexedVerticesPosByRect(VertexType* vertexBuffer, const rectf32& rect)
-		{
-			vertexBuffer[a].pos.set(rect.left, rect.top);
-			vertexBuffer[b].pos.set(rect.right, rect.top);
-			vertexBuffer[c].pos.set(rect.right, rect.bottom);
-			vertexBuffer[d].pos.set(rect.left, rect.bottom);
-		}
-		template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-		static inline void fillIndexedVerticesPosByLine(VertexType* vertexBuffer, float32x2 start, float32x2 end, float width)
-		{
-			float32x2 v = end - start;
-			float tmp = v.x; v.x = v.y; v.y = -tmp;
-			v.normalize();
-			v *= width / 2.0f;
-			vertexBuffer[a].pos = start + v;
-			vertexBuffer[b].pos = end + v;
-			vertexBuffer[c].pos = end - v;
-			vertexBuffer[d].pos = start - v;
-		}
-		template <bool swapDim = false, uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-		static inline void fillIndexedVerticesTexByRect(VertexType* vertexBuffer, rectf32* rect)
-		{
-			if (rect)
-			{
-				if (swapDim)
-				{
-					vertexBuffer[a].tex.set(rect->top, rect->left);
-					vertexBuffer[b].tex.set(rect->top, rect->right);
-					vertexBuffer[c].tex.set(rect->bottom, rect->right);
-					vertexBuffer[d].tex.set(rect->bottom, rect->left);
-				}
-				else
-				{
-					vertexBuffer[a].tex.set(rect->left, rect->top);
-					vertexBuffer[b].tex.set(rect->right, rect->top);
-					vertexBuffer[c].tex.set(rect->right, rect->bottom);
-					vertexBuffer[d].tex.set(rect->left, rect->bottom);
-				}
-			}
-			else
-			{
-				if (swapDim)
-				{
-					vertexBuffer[a].tex.set(0.0f, 0.0f);
-					vertexBuffer[b].tex.set(0.0f, 1.0f);
-					vertexBuffer[c].tex.set(1.0f, 1.0f);
-					vertexBuffer[d].tex.set(1.0f, 0.0f);
-				}
-				else
-				{
-					vertexBuffer[a].tex.set(0.0f, 0.0f);
-					vertexBuffer[b].tex.set(1.0f, 0.0f);
-					vertexBuffer[c].tex.set(1.0f, 1.0f);
-					vertexBuffer[d].tex.set(0.0f, 1.0f);
-				}
-			}
-		}
-		template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-		static inline void fillIndexedVerticesOpacity(VertexType* vertexBuffer, float startOpacity, float endOpacity, Direction gradientDirection)
-		{
-			switch (gradientDirection)
-			{
-			case Direction::Right:
-				vertexBuffer[a].opacity = startOpacity;
-				vertexBuffer[b].opacity = endOpacity;
-				vertexBuffer[c].opacity = endOpacity;
-				vertexBuffer[d].opacity = startOpacity;
-				break;
-
-			case Direction::Left:
-				vertexBuffer[a].opacity = endOpacity;
-				vertexBuffer[b].opacity = startOpacity;
-				vertexBuffer[c].opacity = startOpacity;
-				vertexBuffer[d].opacity = endOpacity;
-				break;
-
-			case Direction::Down:
-				vertexBuffer[a].opacity = startOpacity;
-				vertexBuffer[b].opacity = startOpacity;
-				vertexBuffer[c].opacity = endOpacity;
-				vertexBuffer[d].opacity = endOpacity;
-				break;
-
-			case Direction::Up:
-				vertexBuffer[a].opacity = endOpacity;
-				vertexBuffer[b].opacity = endOpacity;
-				vertexBuffer[c].opacity = startOpacity;
-				vertexBuffer[d].opacity = startOpacity;
-				break;
-			}
-		}
-
-		template <typename VertexType>
-		static inline void fillVerticesPosByRect(VertexType* vertexBuffer, const rectf32& rect)
-		{
-			fillIndexedVerticesPosByRect<0, 1, 4, 2>(vertexBuffer, rect);
-			vertexBuffer[3].pos = vertexBuffer[1].pos;
-			vertexBuffer[5].pos = vertexBuffer[2].pos;
-		}
-		template <typename VertexType>
-		static inline void fillVerticesPosByLine(VertexType* vertexBuffer, float32x2 start, float32x2 end, float width)
-		{
-			fillIndexedVerticesPosByLine<0, 1, 4, 2>(vertexBuffer, start, end, width);
-			vertexBuffer[3].pos = vertexBuffer[1].pos;
-			vertexBuffer[5].pos = vertexBuffer[2].pos;
-		}
-		template <bool swapDim = false, typename VertexType>
-		static inline void fillVerticesTexByRect(VertexType* vertexBuffer, rectf32* rect)
-		{
-			fillIndexedVerticesTexByRect<swapDim, 0, 1, 4, 2>(vertexBuffer, rect);
-			vertexBuffer[3].tex = vertexBuffer[1].tex;
-			vertexBuffer[5].tex = vertexBuffer[2].tex;
-		}
-		template <typename VertexType>
-		static inline void fillVerticesOpacity(VertexType* vertexBuffer, float startOpacity, float endOpacity, Direction gradientDirection)
-		{
-			fillIndexedVerticesOpacity<0, 1, 4, 2>(vertexBuffer, startOpacity, endOpacity, gradientDirection);
-			vertexBuffer[3].opacity = vertexBuffer[1].opacity;
-			vertexBuffer[5].opacity = vertexBuffer[2].opacity;
-		}
-	};
-
 	//-----------------------------------Render-------------------------------------//
 
 	enum class SamplerMode : uint8
@@ -356,65 +226,6 @@ namespace Render2D
 		friend RenderTarget;
 		friend SwapChain;
 
-	private:
-		struct VertexColor		//24 bytes
-		{
-			float32x2 pos;
-			float32x4 color;
-		};
-		struct VertexTex		//20 bytes
-		{
-			float32x2 pos;
-			float32x2 tex;
-			float opactity;
-		};
-		struct VertexEllipse	//36 bytes
-		{
-			float32x2 pos;
-			float32x2 tex;
-			float32x4 color;
-			float innerRadius;
-		};
-
-		static const uint32 vertexBufferLayersCount = 4;
-		static const uint32 vertexBufferPageSize = 1 << 12;
-		static const uint32 vertexBufferPagesCount = 1 << 6;	//limit - uint8 max
-		static const uint32 verticesColorPerPage = vertexBufferPageSize / sizeof(VertexColor);
-		static const uint32 verticesTexPerPage = vertexBufferPageSize / sizeof(VertexTex);
-		static const uint32 verticesEllipsePerPage = vertexBufferPageSize / sizeof(VertexEllipse);
-
-		static_assert(vertexBufferPagesCount <= UINT8_MAX, "page idx can't be larger then uint8");
-
-		union VertexBufferPage
-		{
-			uint8 raw[vertexBufferPageSize];
-			VertexColor vertexColorBuffer[verticesColorPerPage];
-			VertexTex vertexTexBuffer[verticesTexPerPage];
-			VertexEllipse vertexEllipseBuffer[verticesEllipsePerPage];
-		};
-		static VertexBufferPage vertexBuffer[vertexBufferPagesCount];
-
-		struct VertexBufferLayerDesc
-		{
-			static const uint32 texSegmentsLimit = 1 << 4;
-			static const uint32 pagesPerTexSegmentLimit = 1 << 4;
-			static const uint32 pagesPerColorSegmentLimit = 1 << 6;
-			static const uint32 pagesPerEllipseSegmentLimit = 1 << 6;
-
-			struct TexSegment
-			{
-				uint8 pages[pagesPerTexSegmentLimit];
-				uint32 vertexCount;
-				ID3D11ShaderResourceView *d3dShaderResourceView;
-			} texSegments[texSegmentsLimit];
-			uint8 colorSegment[pagesPerColorSegmentLimit];
-			uint8 ellipseSegment[pagesPerEllipseSegmentLimit];
-			uint32 colorVertexCount, ellipseVertexCount;
-		};
-		static VertexBufferLayerDesc vertexBufferLayers[vertexBufferLayersCount];
-
-		static bool indexationEnabled;
-
 	public:
 		static void Init();
 		//static void Destroy();
@@ -430,49 +241,16 @@ namespace Render2D
 
 		static void SetSamplerMode(SamplerMode mode);
 		static void SetBlendState(BlendState state);
-		inline static void EnableIndexation(bool state)
-		{
-			if (indexationEnabled != state)
-			{
-				Flush();
-				indexationEnabled = state;
-			}
-		}
+		static void EnableIndexation(bool state);
 
-		static inline void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, rectf32* srcRect = nullptr, float opacity = 1.0f, bool swapDim = false)
-		{
-			if (!bitmap->d3dShaderResourceView) return;
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillIndexedVerticesPosByRect(currentVertexBuffer, *destRect);
-				_private::fillIndexedVerticesTexByRect<swapSrcDim>(currentVertexBuffer, srcRect);
-				for (uint32 i = 0; i < 4; i++)
-				{
-					currentVertexBuffer[i].opacity = opacity;
-					currentVertexBuffer[i].ext = ext;
-				}
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillVerticesPosByRect(currentVertexBuffer, *destRect);
-				_private::fillVerticesTexByRect<swapSrcDim>(currentVertexBuffer, srcRect);
-				for (uint32 i = 0; i < 6; i++)
-				{
-					currentVertexBuffer[i].opacity = opacity;
-					currentVertexBuffer[i].ext = ext;
-				}
-				vertexCount += 6;
-			}
-		}
-		static inline void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, float startOpacity, float endOpacity,
-			Direction opacityGradientDirection, rectf32* srcRect = nullptr, bool swapDim = false)
+		
+		static void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, uint32 layer = 0,
+			float opacity = 1.0f, rectf32* srcRect = nullptr, bool swapDim = false);
+		static void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, float startOpacity, float endOpacity, 
+			Direction opacityGradientDirection, uint32 layer = 0, rectf32* srcRect = nullptr, bool swapDim = false);
+
+
+
 		{
 			if (!bitmap->d3dShaderResourceView) return;
 			float ext = -((float) pushTextureInSlot(bitmap->d3dShaderResourceView) + 0.4f);

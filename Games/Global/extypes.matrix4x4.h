@@ -10,9 +10,8 @@
 #include <math.h>
 #endif
 
-class matrix4x4
+struct matrix4x4
 {
-public:
 	union
 	{
 		float data[4][4];

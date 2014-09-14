@@ -10,9 +10,8 @@
 #include <math.h>
 #endif
 
-class matrix3x2
+struct matrix3x2
 {
-public:
 	float data[3][2];
 
 	inline void clear()

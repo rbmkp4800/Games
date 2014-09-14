@@ -1,50 +1,50 @@
 #include <d3d11_2.h>
 #include <dxgi1_3.h>
 #include <windows.ui.xaml.media.dxinterop.h>
-#include "LodePNG\lodepng.h"
 #include "DXHelper.h"
+#include "LodePNG\lodepng.h"
+
+#include <extypes.matrix3x2.h>
 
 #include "Render2D.h"
 
 #include "Shaders\vsBasic.csch"
 #include "Shaders\psBasic.csch"
 
-#define TEXTURE_FORMAT	DXGI_FORMAT_R8G8B8A8_UNORM
-
 using namespace Render2D;
 using namespace DXHelper;
 
-struct DXResources
-{
-	ID3D11Device2 *d3dDevice;
-	ID3D11DeviceContext2 *d3dContext;
-	IDXGIFactory3 *dxgiFactory;
-	IDXGIDevice1 *dxgiDevice;
+ID3D11Device2 *d3dDevice = nullptr;
+ID3D11DeviceContext2 *d3dContext = nullptr;
+IDXGIFactory3 *dxgiFactory = nullptr;
+IDXGIDevice1 *dxgiDevice = nullptr;
 
-	ID3D11InputLayout *d3dILBasic;
-	ID3D11VertexShader *d3dVSBasic;
-	ID3D11PixelShader *d3dPSBasic;
-	ID3D11Buffer *d3dVertexBuffer, *d3dIndexBuffer, *d3dVSCBTransform;
-	ID3D11BlendState *d3dBlendStateAlpha, *d3dBlendStateClear;
-	ID3D11SamplerState *d3dSamplerStateLinearMirrorOnce, *d3dSamplerStateLinearWrap;
-	ID3D11RasterizerState *d3dRasterizerState;
-} static dx = { 0 };
+ID3D11InputLayout *d3dILBasic;
+ID3D11VertexShader *d3dVSBasic;
+ID3D11PixelShader *d3dPSBasic;
+ID3D11Buffer *d3dVertexBuffer, *d3dIndexBuffer, *d3dVSCBTransform;
+ID3D11BlendState *d3dBlendStateAlpha, *d3dBlendStateClear;
+ID3D11SamplerState *d3dSamplerStateLinearMirrorOnce, *d3dSamplerStateLinearWrap;
+ID3D11RasterizerState *d3dRasterizerState;
 
-struct VSCBTransform
+struct
 {
 	float32x3 transformMatrixRow1;
-	uint32 _padding1;
+	float _padding1;
 	float32x3 transformMatrixRow2;
-	uint32 _padding2;
+	float _padding2;
 	float32x2 scale;
-	uint32 _padding3, _padding4;
+	float _padding3, _padding4;
 
-	inline void setTransformMatrix(const matrix3x2& matrix);
-	inline VSCBTransform();
-} static vscbTransform;
+	inline void SetMatrix(matrix3x2& matrix)
+	{
+		transformMatrixRow1.set(matrix.data[0][0], matrix.data[1][0], matrix.data[2][0]);
+		transformMatrixRow2.set(matrix.data[0][1], matrix.data[1][1], matrix.data[2][1]);
+	}
+} vscbTransform;
 
-ID3D11RenderTargetView *d3dRenderTargetView = nullptr;
-bool Render::indexationEnabled = true;
+ID3D11RenderTargetView *d3dCurrentRenderTargetView = nullptr;
+bool indexationEnabled = true;
 
 void Render::Init()
 {
@@ -54,8 +54,6 @@ void Render::Init()
 		D3D_FEATURE_LEVEL_10_1,
 		D3D_FEATURE_LEVEL_10_0,
 		D3D_FEATURE_LEVEL_9_3,
-		//D3D_FEATURE_LEVEL_9_2,
-		//D3D_FEATURE_LEVEL_9_1,
 	};
 	D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
 #ifdef _DEBUG
@@ -105,22 +103,10 @@ void Render::Init()
 	dx.d3dContext->RSSetState(dx.d3dRasterizerState);
 	SetSamplerMode(SamplerMode::Default);
 	SetBlendState(BlendState::Default);
+	vscbTransform.SetMatrix(matrix3x2::identity());
+	vscbTransform.scale.set(0.0f, 0.0f);
 }
 
-inline Render::VSCBTransform::VSCBTransform()
-{
-	setTransformMatrix(matrix3x2::identity());
-	_padding1 = 0xffffffff;
-	_padding2 = 0xffffffff;
-	_padding3 = 0xffffffff;
-	_padding4 = 0xffffffff;
-	scale.set(0.0f, 0.0f);
-}
-inline void Render::VSCBTransform::setTransformMatrix(const matrix3x2& matrix)
-{
-	transformMatrixRow1.set(matrix.data[0][0], matrix.data[1][0], matrix.data[2][0]);
-	transformMatrixRow2.set(matrix.data[0][1], matrix.data[1][1], matrix.data[2][1]);
-}
 inline void Render::setDeviceStates(ID3D11InputLayout *_d3dInputLayout, ID3D11VertexShader *_d3dVertexShader,
 	ID3D11PixelShader *_d3dPixelShader, uint32 _vertexBufferStride)
 {
@@ -207,6 +193,10 @@ void Render::Clear(coloru32 color)
 void Render::SetTransform(const matrix3x2& transform)
 {
 	Flush();
+
+	transformMatrixRow1.set(matrix.data[0][0], matrix.data[1][0], matrix.data[2][0]);
+	transformMatrixRow2.set(matrix.data[0][1], matrix.data[1][1], matrix.data[2][1]);
+
 	vscbTransform.setTransformMatrix(transform);
 	dx.d3dContext->UpdateSubresource(dx.d3dVSCBTransform, 0, nullptr, &vscbTransform, 0, 0);
 }
@@ -251,8 +241,18 @@ void Render::SetBlendState(BlendState state)
 	}
 	lastBlendState = state;
 }
+void Render::EnableIndexation(bool state)
+{
+	if (indexationEnabled != state)
+	{
+		Flush();
+		indexationEnabled = state;
+	}
+}
 
-//--------------------------------Interfaces----------------------------------//
+////////////////////////////////////////////////////////////////////////////////
+
+const DXGI_FORMAT defaultTextresFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 inline bool ITexture::InitITexture(uint32 x, uint32 y, void* data, uint32 bindFlags)
 {
@@ -347,7 +347,7 @@ bool SwapChain::CreateForComposition(IUnknown* panel, uint32 x, uint32 y)
 	ISwapChainBackgroundPanelNative *swapChainNativePanel;
 	if (FAILED(panel->QueryInterface(__uuidof(ISwapChainBackgroundPanelNative), (void**) &swapChainNativePanel)))
 		return false;
-	result &= SUCCEEDED(Render::dx.dxgiFactory->CreateSwapChainForComposition(Render::dx.d3dDevice, 
+	result &= SUCCEEDED(Render::dx.dxgiFactory->CreateSwapChainForComposition(Render::dx.d3dDevice,
 		&DXGISwapChainDesc1(x, y, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL), nullptr, &dxgiSwapChain));
 	swapChainNativePanel->SetSwapChain(dxgiSwapChain);
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
@@ -361,7 +361,7 @@ bool SwapChain::CreateForComposition(IUnknown* panel, uint32 x, uint32 y)
 bool SwapChain::CreateForHWnd(void* hWnd, uint32 x, uint32 y)
 {
 	bool result = true;
-	result &= SUCCEEDED(Render::dx.dxgiFactory->CreateSwapChainForHwnd(Render::dx.d3dDevice, (HWND)hWnd,
+	result &= SUCCEEDED(Render::dx.dxgiFactory->CreateSwapChainForHwnd(Render::dx.d3dDevice, (HWND) hWnd,
 		&DXGISwapChainDesc1(x, y, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_EFFECT_SEQUENTIAL), nullptr, nullptr, &dxgiSwapChain));
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
 	result &= InitIRenderTarget();
@@ -406,4 +406,284 @@ SwapChain::~SwapChain()
 bool TextFormat::Create()
 {
 	return texture.CreateFromPng(L"font.png");
+}
+
+//---------------------------------Private--------------------------------------//
+
+class _private abstract
+{
+	friend Render;
+
+private:
+	template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
+	static inline void fillIndexedVerticesPosByRect(VertexType* vertexBuffer, const rectf32& rect)
+	{
+		vertexBuffer[a].pos.set(rect.left, rect.top);
+		vertexBuffer[b].pos.set(rect.right, rect.top);
+		vertexBuffer[c].pos.set(rect.right, rect.bottom);
+		vertexBuffer[d].pos.set(rect.left, rect.bottom);
+	}
+	template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
+	static inline void fillIndexedVerticesPosByLine(VertexType* vertexBuffer, float32x2 start, float32x2 end, float width)
+	{
+		float32x2 v = end - start;
+		float tmp = v.x; v.x = v.y; v.y = -tmp;
+		v.normalize();
+		v *= width / 2.0f;
+		vertexBuffer[a].pos = start + v;
+		vertexBuffer[b].pos = end + v;
+		vertexBuffer[c].pos = end - v;
+		vertexBuffer[d].pos = start - v;
+	}
+	template <bool swapDim = false, uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
+	static inline void fillIndexedVerticesTexByRect(VertexType* vertexBuffer, rectf32* rect)
+	{
+		if (rect)
+		{
+			if (swapDim)
+			{
+				vertexBuffer[a].tex.set(rect->top, rect->left);
+				vertexBuffer[b].tex.set(rect->top, rect->right);
+				vertexBuffer[c].tex.set(rect->bottom, rect->right);
+				vertexBuffer[d].tex.set(rect->bottom, rect->left);
+			}
+			else
+			{
+				vertexBuffer[a].tex.set(rect->left, rect->top);
+				vertexBuffer[b].tex.set(rect->right, rect->top);
+				vertexBuffer[c].tex.set(rect->right, rect->bottom);
+				vertexBuffer[d].tex.set(rect->left, rect->bottom);
+			}
+		}
+		else
+		{
+			if (swapDim)
+			{
+				vertexBuffer[a].tex.set(0.0f, 0.0f);
+				vertexBuffer[b].tex.set(0.0f, 1.0f);
+				vertexBuffer[c].tex.set(1.0f, 1.0f);
+				vertexBuffer[d].tex.set(1.0f, 0.0f);
+			}
+			else
+			{
+				vertexBuffer[a].tex.set(0.0f, 0.0f);
+				vertexBuffer[b].tex.set(1.0f, 0.0f);
+				vertexBuffer[c].tex.set(1.0f, 1.0f);
+				vertexBuffer[d].tex.set(0.0f, 1.0f);
+			}
+		}
+	}
+	template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
+	static inline void fillIndexedVerticesOpacity(VertexType* vertexBuffer, float startOpacity, float endOpacity, Direction gradientDirection)
+	{
+		switch (gradientDirection)
+		{
+		case Direction::Right:
+			vertexBuffer[a].opacity = startOpacity;
+			vertexBuffer[b].opacity = endOpacity;
+			vertexBuffer[c].opacity = endOpacity;
+			vertexBuffer[d].opacity = startOpacity;
+			break;
+
+		case Direction::Left:
+			vertexBuffer[a].opacity = endOpacity;
+			vertexBuffer[b].opacity = startOpacity;
+			vertexBuffer[c].opacity = startOpacity;
+			vertexBuffer[d].opacity = endOpacity;
+			break;
+
+		case Direction::Down:
+			vertexBuffer[a].opacity = startOpacity;
+			vertexBuffer[b].opacity = startOpacity;
+			vertexBuffer[c].opacity = endOpacity;
+			vertexBuffer[d].opacity = endOpacity;
+			break;
+
+		case Direction::Up:
+			vertexBuffer[a].opacity = endOpacity;
+			vertexBuffer[b].opacity = endOpacity;
+			vertexBuffer[c].opacity = startOpacity;
+			vertexBuffer[d].opacity = startOpacity;
+			break;
+		}
+	}
+
+	template <typename VertexType>
+	static inline void fillVerticesPosByRect(VertexType* vertexBuffer, const rectf32& rect)
+	{
+		fillIndexedVerticesPosByRect<0, 1, 4, 2>(vertexBuffer, rect);
+		vertexBuffer[3].pos = vertexBuffer[1].pos;
+		vertexBuffer[5].pos = vertexBuffer[2].pos;
+	}
+	template <typename VertexType>
+	static inline void fillVerticesPosByLine(VertexType* vertexBuffer, float32x2 start, float32x2 end, float width)
+	{
+		fillIndexedVerticesPosByLine<0, 1, 4, 2>(vertexBuffer, start, end, width);
+		vertexBuffer[3].pos = vertexBuffer[1].pos;
+		vertexBuffer[5].pos = vertexBuffer[2].pos;
+	}
+	template <bool swapDim = false, typename VertexType>
+	static inline void fillVerticesTexByRect(VertexType* vertexBuffer, rectf32* rect)
+	{
+		fillIndexedVerticesTexByRect<swapDim, 0, 1, 4, 2>(vertexBuffer, rect);
+		vertexBuffer[3].tex = vertexBuffer[1].tex;
+		vertexBuffer[5].tex = vertexBuffer[2].tex;
+	}
+	template <typename VertexType>
+	static inline void fillVerticesOpacity(VertexType* vertexBuffer, float startOpacity, float endOpacity, Direction gradientDirection)
+	{
+		fillIndexedVerticesOpacity<0, 1, 4, 2>(vertexBuffer, startOpacity, endOpacity, gradientDirection);
+		vertexBuffer[3].opacity = vertexBuffer[1].opacity;
+		vertexBuffer[5].opacity = vertexBuffer[2].opacity;
+	}
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct VertexColor		//24 bytes
+{
+	float32x2 pos;
+	float32x4 color;
+};
+struct VertexTex		//20 bytes
+{
+	float32x2 pos;
+	float32x2 tex;
+	float opactity;
+};
+struct VertexEllipse	//36 bytes
+{
+	float32x2 pos;
+	float32x2 tex;
+	float32x4 color;
+	float innerRadius;
+};
+
+const uint32 vertexBufferLayersCount = 4;
+const uint32 vertexBufferPageSize = 1 << 12;
+const uint32 vertexBufferPagesLimit = 1 << 6;	//limit - uint8 max
+const uint32 colorVerticesPerPage = vertexBufferPageSize / sizeof(VertexColor);
+const uint32 texVerticesPerPage = vertexBufferPageSize / sizeof(VertexTex);
+const uint32 ellipseVerticesPerPage = vertexBufferPageSize / sizeof(VertexEllipse);
+const uint32 texPrimitivesPerPage = texVerticesPerPage / 4;		//only indexed drawing
+const uint32 texSegmentsPerLayerLimit = 1 << 4;
+const uint32 pagesPerTexSegmentLimit = 1 << 4;
+const uint32 pagesPerColorSegmentLimit = 1 << 6;
+const uint32 pagesPerEllipseSegmentLimit = 1 << 6;
+
+union VertexBufferPage
+{
+	uint8 raw[vertexBufferPageSize];
+	VertexColor color[colorVerticesPerPage];
+	VertexTex tex[texVerticesPerPage];
+	VertexEllipse ellipse[ellipseVerticesPerPage];
+} vertexBuffer[vertexBufferPagesLimit] = { 0 };
+uint32 vertexBufferAllocatedPagesCount = 0;
+
+struct VertexBufferLayerDesc
+{
+	struct TexSegment
+	{
+		uint8 pages[pagesPerTexSegmentLimit];
+		uint32 primitivesCount;
+		ID3D11ShaderResourceView *d3dShaderResourceView;
+	} texSegments[texSegmentsPerLayerLimit];
+	uint8 colorSegmentPages[pagesPerColorSegmentLimit];
+	uint8 ellipseSegmentPages[pagesPerEllipseSegmentLimit];
+	uint32 colorVertexCount;
+	uint32 ellipseVertexCount;
+} vertexBufferLayers[vertexBufferLayersCount] = { 0 };
+
+inline VertexTex* allocateTexVertices(uint32 layerIdx, ID3D11ShaderResourceView* d3dSRV)
+{
+	VertexBufferLayerDesc *layer = &vertexBufferLayers[layerIdx];
+	for (uint32 i = 0; i < texSegmentsPerLayerLimit; i++)
+	{
+		VertexBufferLayerDesc::TexSegment *segment = &layer->texSegments[i];
+		if (segment->d3dShaderResourceView == d3dSRV)
+		{
+			if (segment->primitivesCount % texPrimitivesPerPage)
+			{
+				VertexTex *result = &vertexBuffer[segment->pages[segment->primitivesCount / texPrimitivesPerPage]].tex[(segment->primitivesCount % texPrimitivesPerPage) * 4];
+				segment->primitivesCount++;
+				return result;
+			}
+			else
+			{
+				if (segment->primitivesCount + 1 < pagesPerTexSegmentLimit * texPrimitivesPerPage)
+				{
+					if (vertexBufferAllocatedPagesCount < vertexBufferPagesLimit)
+					{
+						segment->primitivesCount++;
+						segment->pages[segment->primitivesCount / texPrimitivesPerPage] = vertexBufferAllocatedPagesCount++;
+						return vertexBuffer[segment->pages[segment->primitivesCount / texPrimitivesPerPage]].tex;
+					}
+					else
+						break;
+				}
+				else
+					continue;
+			}
+		}
+
+		if (segment->d3dShaderResourceView == nullptr)
+		{
+			if (vertexBufferAllocatedPagesCount < vertexBufferPagesLimit)
+			{
+				segment->d3dShaderResourceView = d3dSRV;
+				segment->pages[0] = vertexBufferAllocatedPagesCount++;
+				segment->primitivesCount = 1;
+				return vertexBuffer[segment->pages[0]].tex;
+			}
+			else
+				break;
+		}
+	}
+
+	Render::Flush();
+	vertexBufferAllocatedPagesCount = 1;
+	layer->texSegments[0].d3dShaderResourceView = d3dSRV;
+	layer->texSegments[0].pages[0] = 0;
+	layer->texSegments[0].primitivesCount = 1;
+
+	return vertexBuffer[0].tex;
+}
+inline VertexColor* allocateColorVertices(uint32 layerIdx, uint32 verticesToAllocate)
+{
+	VertexBufferLayerDesc *layer = &vertexBufferLayers[layerIdx];
+	if ((layer->colorVertexCount + verticesToAllocate) / colorVerticesPerPage < pagesPerColorSegmentLimit)
+	{
+		if (layer->colorVertexCount % colorVerticesPerPage <= colorVerticesPerPage - verticesToAllocate)
+		{
+			VertexColor *result = &vertexBuffer[layer->colorSegmentPages[layer->colorVertexCount / colorVerticesPerPage]].color[layer->colorVertexCount % colorVerticesPerPage];
+			layer->colorVertexCount += verticesToAllocate;
+			return result;
+		}
+		else
+		{
+			if (vertexBufferAllocatedPagesCount < vertexBufferPagesLimit)
+			{
+				layer->colorVertexCount += verticesToAllocate;
+				layer->colorSegmentPages[layer->colorVertexCount / colorVerticesPerPage] = vertexBufferAllocatedPagesCount++;
+				return vertexBuffer[layer->colorSegmentPages[layer->colorVertexCount / colorVerticesPerPage]].color;
+			}
+		}
+	}
+
+	Render::Flush();
+	vertexBufferAllocatedPagesCount = 1;
+	layer->colorSegmentPages[0] = 0;
+	layer->colorVertexCount = verticesToAllocate;
+
+	return vertexBuffer[0].color;
+}
+inline VertexEllipse* allocateEllipseVertices(uint32 layerIdx, uint32 verticesToAllocate)
+{
+	VertexBufferLayerDesc *layer = &vertexBufferLayers[layerIdx];
+}
+
+void Render::DrawBitmap(IShaderResource* bitmap, rectf32* destRect, uint32 layer, float opacity, rectf32* srcRect, bool swapDim)
+{
+	if (!bitmap->d3dShaderResourceView) return;
+	if (layer > vertexBufferLayersCount) return;
 }
