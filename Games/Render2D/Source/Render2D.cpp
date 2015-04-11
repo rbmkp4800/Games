@@ -1,52 +1,55 @@
 #include <d3d11_2.h>
 #include <dxgi1_3.h>
 #include <windows.ui.xaml.media.dxinterop.h>
-#include "DXHelper.h"
+
 #include "LodePNG\lodepng.h"
+#include "D3DHelper.h"
+#include "DXGIHelper.h"
 
 #include <extypes.matrix3x2.h>
 
 #include "Render2D.h"
 
-#include "Shaders\vsBasic.csch"
-#include "Shaders\psBasic.csch"
+#include "Shaders\Compiled\vsColor.csoh"
+#include "Shaders\Compiled\vsTex.csoh"
+#include "Shaders\Compiled\vsEllipse.csoh"
+#include "Shaders\Compiled\psColor.csoh"
+#include "Shaders\Compiled\psTex.csoh"
+#include "Shaders\Compiled\psEllipse.csoh"
 
 using namespace Render2D;
-using namespace DXHelper;
 
-ID3D11Device2 *d3dDevice = nullptr;
-ID3D11DeviceContext2 *d3dContext = nullptr;
-IDXGIFactory3 *dxgiFactory = nullptr;
-IDXGIDevice1 *dxgiDevice = nullptr;
+IDXGIFactory3 *Device::dxgiFactory = nullptr;
 
-ID3D11InputLayout *d3dILBasic;
-ID3D11VertexShader *d3dVSBasic;
-ID3D11PixelShader *d3dPSBasic;
-ID3D11Buffer *d3dVertexBuffer, *d3dIndexBuffer, *d3dVSCBTransform;
-ID3D11BlendState *d3dBlendStateAlpha, *d3dBlendStateClear;
-ID3D11SamplerState *d3dSamplerStateLinearMirrorOnce, *d3dSamplerStateLinearWrap;
-ID3D11RasterizerState *d3dRasterizerState;
-
-struct
+Device::Device()
 {
-	float32x3 transformMatrixRow1;
-	float _padding1;
-	float32x3 transformMatrixRow2;
-	float _padding2;
-	float32x2 scale;
-	float _padding3, _padding4;
+	memset(this, 0, sizeof(*this));
+}
+Device::~Device()
+{
+	SafeComInterfaceRelease(d3dDevice);
+	SafeComInterfaceRelease(d3dContext);
 
-	inline void SetMatrix(matrix3x2& matrix)
-	{
-		transformMatrixRow1.set(matrix.data[0][0], matrix.data[1][0], matrix.data[2][0]);
-		transformMatrixRow2.set(matrix.data[0][1], matrix.data[1][1], matrix.data[2][1]);
-	}
-} vscbTransform;
+	SafeComInterfaceRelease(d3dColorIL);
+	SafeComInterfaceRelease(d3dTexIL);
+	SafeComInterfaceRelease(d3dEllipseIL);
+	SafeComInterfaceRelease(d3dColorVS);
+	SafeComInterfaceRelease(d3dTexVS);
+	SafeComInterfaceRelease(d3dEllipseVS);
+	SafeComInterfaceRelease(d3dColorPS);
+	SafeComInterfaceRelease(d3dTexPS);
+	SafeComInterfaceRelease(d3dEllipsePS);
 
-ID3D11RenderTargetView *d3dCurrentRenderTargetView = nullptr;
-bool indexationEnabled = true;
+	SafeComInterfaceRelease(d3dVertexBuffer);
+	SafeComInterfaceRelease(d3dQuadIndexBuffer);
+	SafeComInterfaceRelease(d3dTransformVSCB);
 
-void Render::Init()
+	SafeComInterfaceRelease(d3dDefaultRS);
+	SafeComInterfaceRelease(d3dDefaultSS);
+	SafeComInterfaceRelease(d3dAlphaBS);
+}
+
+bool Device::Create()
 {
 	D3D_FEATURE_LEVEL currentFeatureLevel, featureLevels[] =
 	{
@@ -59,218 +62,187 @@ void Render::Init()
 #ifdef _DEBUG
 		D3D11_CREATE_DEVICE_DEBUG |
 #endif
-		D3D11_CREATE_DEVICE_BGRA_SUPPORT, featureLevels, elemcntof(featureLevels), D3D11_SDK_VERSION,
-		(ID3D11Device**) &dx.d3dDevice, &currentFeatureLevel, (ID3D11DeviceContext**) &dx.d3dContext);
-	dx.d3dDevice->QueryInterface(__uuidof(IDXGIDevice1), (void**) &dx.dxgiDevice);
-	dx.dxgiDevice->SetMaximumFrameLatency(1);
-	CreateDXGIFactory1(__uuidof(*dx.dxgiFactory), (void**) &dx.dxgiFactory);
+		D3D11_CREATE_DEVICE_BGRA_SUPPORT, featureLevels, elemcntof(featureLevels), 
+		D3D11_SDK_VERSION, &d3dDevice, &currentFeatureLevel, &d3dContext);
 
-	D3D11_INPUT_ELEMENT_DESC vertexBasicDesc[] = 
+	if (!dxgiFactory)
+		CreateDXGIFactory1(__uuidof(*dxgiFactory), (void**) &dxgiFactory);
+
+	D3D11_INPUT_ELEMENT_DESC d3dVertexColorILDesc[] = 
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-	dx.d3dDevice->CreateInputLayout(vertexBasicDesc, elemcntof(vertexBasicDesc), vsBasicData, sizeof(vsBasicData), &dx.d3dILBasic);
-	dx.d3dDevice->CreateVertexShader(vsBasicData, sizeof(vsBasicData), nullptr, &dx.d3dVSBasic);
-	dx.d3dDevice->CreatePixelShader(psBasicData, sizeof(psBasicData), nullptr, &dx.d3dPSBasic);
-
-	uint16x3 indexBuffer[indexedPrimitivesLimit];
-	for (uint16 i = 0; i < indexedPrimitivesLimit / 2; i++)
+	D3D11_INPUT_ELEMENT_DESC d3dVertexTexILDesc [] =
 	{
-		indexBuffer[i * 2].set(i * 4, i * 4 + 1, i * 4 + 3);
-		indexBuffer[i * 2 + 1].set(i * 4 + 1, i * 4 + 2, i * 4 + 3);
-	}
-	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(indexBuffer), D3D11_BIND_INDEX_BUFFER),
-		&D3D11SubresourceData(indexBuffer), &dx.d3dIndexBuffer);
-	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(VertexBasic) * vertexLimit, D3D11_BIND_VERTEX_BUFFER), nullptr, &dx.d3dVertexBuffer);
-	dx.d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(VSCBTransform), D3D11_BIND_CONSTANT_BUFFER), nullptr, &dx.d3dVSCBTransform);
+		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	D3D11_INPUT_ELEMENT_DESC d3dVertexEllipseILDesc [] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
 
-	dx.d3dDevice->CreateRasterizerState(&D3D11RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE), &dx.d3dRasterizerState);
-	dx.d3dDevice->CreateSamplerState(&D3D11SamplerDesc(D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP), &dx.d3dSamplerStateLinearWrap);
-	dx.d3dDevice->CreateSamplerState(&D3D11SamplerDesc(D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D11_TEXTURE_ADDRESS_MIRROR_ONCE, D3D11_TEXTURE_ADDRESS_MIRROR_ONCE, D3D11_TEXTURE_ADDRESS_MIRROR_ONCE), &dx.d3dSamplerStateLinearMirrorOnce);
-	dx.d3dDevice->CreateBlendState(&D3D11BlendDesc(
+	d3dDevice->CreateInputLayout(d3dVertexColorILDesc, elemcntof(d3dVertexColorILDesc), vsColorData, sizeof(vsColorData), &d3dColorIL);
+	d3dDevice->CreateInputLayout(d3dVertexTexILDesc, elemcntof(d3dVertexTexILDesc), vsTexData, sizeof(vsTexData), &d3dColorIL);
+	d3dDevice->CreateInputLayout(d3dVertexEllipseILDesc, elemcntof(d3dVertexEllipseILDesc), vsEllipseData, sizeof(vsEllipseData), &d3dColorIL);
+	d3dDevice->CreateVertexShader(vsColorData, sizeof(vsColorData), nullptr, &d3dColorVS);
+	d3dDevice->CreateVertexShader(vsTexData, sizeof(vsTexData), nullptr, &d3dTexVS);
+	d3dDevice->CreateVertexShader(vsEllipseData, sizeof(vsEllipseData), nullptr, &d3dEllipseVS);
+	d3dDevice->CreatePixelShader(psColorData, sizeof(psColorData), nullptr, &d3dColorPS);
+	d3dDevice->CreatePixelShader(psTexData, sizeof(psTexData), nullptr, &d3dTexPS);
+	d3dDevice->CreatePixelShader(psEllipseData, sizeof(psEllipseData), nullptr, &d3dEllipsePS);
+
+	uint16x3 quadIndexBuffer[indexedQuadsLimit * 2];
+	for (uint16 i = 0; i < indexedQuadsLimit; i++)
+	{
+		quadIndexBuffer[i * 2 + 0].set(i * 4 + 0, i * 4 + 1, i * 4 + 3);
+		quadIndexBuffer[i * 2 + 1].set(i * 4 + 1, i * 4 + 2, i * 4 + 3);
+	}
+
+	d3dDevice->CreateBuffer(&D3D11BufferDesc(vertexBufferSize, D3D11_BIND_VERTEX_BUFFER), nullptr, &d3dVertexBuffer);
+	d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(uint16) * indexedQuadsLimit * 6, D3D11_BIND_INDEX_BUFFER),
+		&D3D11SubresourceData(quadIndexBuffer), &d3dQuadIndexBuffer);
+	d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(float32x4) * 2, D3D11_BIND_CONSTANT_BUFFER), nullptr, &d3dTransformVSCB);
+
+	d3dDevice->CreateRasterizerState(&D3D11RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE), &d3dDefaultRS);
+	d3dDevice->CreateBlendState(&D3D11BlendDesc(
 		D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_OP_ADD, D3D11_BLEND_INV_SRC_ALPHA,
-		D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE), &dx.d3dBlendStateAlpha);
-	dx.d3dDevice->CreateBlendState(&D3D11BlendDesc(
-		D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO,
-		D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ZERO), &dx.d3dBlendStateClear);
+		D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE), &d3dAlphaBS);
+	d3dDevice->CreateSamplerState(&D3D11SamplerDesc(D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP), &d3dDefaultSS);
 
-	dx.d3dContext->IASetIndexBuffer(dx.d3dIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-	dx.d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	dx.d3dContext->VSSetConstantBuffers(0, 1, &dx.d3dVSCBTransform);
-	dx.d3dContext->RSSetState(dx.d3dRasterizerState);
-	SetSamplerMode(SamplerMode::Default);
-	SetBlendState(BlendState::Default);
-	vscbTransform.SetMatrix(matrix3x2::identity());
-	vscbTransform.scale.set(0.0f, 0.0f);
+	SetTransform(matrix3x2::identity());
+
+	return true;
 }
 
-inline void Render::setDeviceStates(ID3D11InputLayout *_d3dInputLayout, ID3D11VertexShader *_d3dVertexShader,
-	ID3D11PixelShader *_d3dPixelShader, uint32 _vertexBufferStride)
+void Device::SetTarget(IRenderTarget *target)
 {
-	static ID3D11InputLayout *d3dInputLayout = nullptr;
-	static ID3D11VertexShader *d3dVertexShader = nullptr;
-	static ID3D11PixelShader *d3dPixelShader = nullptr;
-	static uint32 vertexBufferStride = 0;
+	ID3D11RenderTargetView *d3dRenderTargetView = target->GetD3D11RenderTargetView();
+	d3dContext->OMSetRenderTargets(1, &d3dRenderTargetView, nullptr);
 
-	if (d3dInputLayout != _d3dInputLayout)
-	{
-		d3dInputLayout = _d3dInputLayout;
-		dx.d3dContext->IASetInputLayout(d3dInputLayout);
-	}
-	if (d3dVertexShader != _d3dVertexShader)
-	{
-		d3dVertexShader = _d3dVertexShader;
-		dx.d3dContext->VSSetShader(d3dVertexShader, nullptr, 0);
-	}
-	if (d3dPixelShader != _d3dPixelShader)
-	{
-		d3dPixelShader = _d3dPixelShader;
-		dx.d3dContext->PSSetShader(d3dPixelShader, nullptr, 0);
-	}
-	if (vertexBufferStride != _vertexBufferStride)
-	{
-		vertexBufferStride = _vertexBufferStride;
-		uint32 offset = 0;
-		dx.d3dContext->IASetVertexBuffers(0, 1, &dx.d3dVertexBuffer, &vertexBufferStride, &offset);
-	}
-}
-
-void Render::Flush()
-{
-	if (!vertexCount)
-		return;
-
-	setDeviceStates(dx.d3dILBasic, dx.d3dVSBasic, dx.d3dPSBasic, sizeof(VertexBasic));
-	if (d3dTextureSlotsSRVBuffer[0])
-		dx.d3dContext->PSSetShaderResources(0, textureSlotsCount, d3dTextureSlotsSRVBuffer);
-	dx.d3dContext->UpdateSubresource(dx.d3dVertexBuffer, 0, &DXHelper::D3D11Box(0, vertexCount * sizeof(VertexBasic)), vertexBuffer, 0, 0);
-	if (indexationEnabled)
-		dx.d3dContext->DrawIndexed(vertexCount / 4 * 6, 0, 0);
-	else
-		dx.d3dContext->Draw(vertexCount, 0);
-	Discard();
-}
-void Render::Discard()
-{
-	vertexCount = 0;
-	memset(d3dTextureSlotsSRVBuffer, 0, sizeof(d3dTextureSlotsSRVBuffer));
-}
-
-void Render::SetTarget(IRenderTarget *target)
-{
-	if (d3dRenderTargetView == target->d3dRenderTargetView)
-		return;
-
-	Flush();
-	dx.d3dContext->PSSetShaderResources(0, textureSlotsCount, d3dTextureSlotsSRVBuffer);
-	d3dRenderTargetView = target->d3dRenderTargetView;
 	uint32x2 targetSize = target->GetSize();
-	vscbTransform.scale.set(2.0f / targetSize.x, -2.0f / targetSize.y);
-	dx.d3dContext->OMSetRenderTargets(1, &target->d3dRenderTargetView, nullptr);
-	dx.d3dContext->RSSetViewports(1, &DXHelper::D3D11ViewPort(0.0f, 0.0f, (float) targetSize.x, (float) targetSize.y));
-	dx.d3dContext->UpdateSubresource(dx.d3dVSCBTransform, 0, nullptr, &vscbTransform, 0, 0);
+	d3dContext->RSSetViewports(1, &D3D11ViewPort(0.0f, 0.0f, float(targetSize.x), float(targetSize.y)));
 }
-void Render::ResetTarget()
+void Device::SetTexture(IShaderResource *texture)
 {
-	Flush();
-	d3dRenderTargetView = nullptr;
-	dx.d3dContext->OMSetRenderTargets(1, &d3dRenderTargetView, nullptr);
+	ID3D11ShaderResourceView *d3dShaderResourceView = texture->GetD3D11ShaderResourceView();
+	d3dContext->PSSetShaderResources(0, 1, &d3dShaderResourceView);
 }
-void Render::Clear(IRenderTarget* target, coloru32 color)
+void Device::SetTransform(matrix3x2& _transform)
 {
-	if (d3dRenderTargetView == target->d3dRenderTargetView)
-		Discard();
-	dx.d3dContext->ClearRenderTargetView(target->d3dRenderTargetView, (float*) &color.toFloat4());
-}
-void Render::Clear(coloru32 color)
-{
-	Discard();
-	dx.d3dContext->ClearRenderTargetView(d3dRenderTargetView, (float*) &color.toFloat4());
-}
-void Render::SetTransform(const matrix3x2& transform)
-{
-	Flush();
-
-	transformMatrixRow1.set(matrix.data[0][0], matrix.data[1][0], matrix.data[2][0]);
-	transformMatrixRow2.set(matrix.data[0][1], matrix.data[1][1], matrix.data[2][1]);
-
-	vscbTransform.setTransformMatrix(transform);
-	dx.d3dContext->UpdateSubresource(dx.d3dVSCBTransform, 0, nullptr, &vscbTransform, 0, 0);
-}
-
-void Render::SetSamplerMode(SamplerMode mode)
-{
-	static SamplerMode lastSamplerMode = SamplerMode::None;
-	if (lastSamplerMode == mode)
-		return;
-
-	Flush();
-	switch (mode)
+	struct
 	{
-	case SamplerMode::Linear_TextAddressMirrorOnce:
-		dx.d3dContext->PSSetSamplers(0, 1, &dx.d3dSamplerStateLinearMirrorOnce);
-		break;
-	case SamplerMode::Linear_TextAddressWrap:
-		dx.d3dContext->PSSetSamplers(0, 1, &dx.d3dSamplerStateLinearWrap);
-		break;
-	default:
-		return;
+		float32x4 row0;
+		float32x4 row1;
+	} transform;
+	transform.row0.set(_transform.data[0][0], _transform.data[1][0], _transform.data[2][0], 0.0f);
+	transform.row1.set(_transform.data[0][1], _transform.data[1][1], _transform.data[2][1], 0.0f);
+	d3dContext->UpdateSubresource(d3dTransformVSCB, 0, nullptr, &transform, 0, 0);
+}
+
+void Device::Clear(IRenderTarget* target, coloru32 color)
+{
+	float colorf[4];
+	color.toFloat4Unorm(colorf);
+	d3dContext->ClearRenderTargetView(target->GetD3D11RenderTargetView(), colorf);
+}
+void Device::Clear(coloru32 color)
+{
+	float colorf[4];
+	color.toFloat4Unorm(colorf);
+	ID3D11RenderTargetView *d3dRenderTargetView = nullptr;
+	d3dContext->OMGetRenderTargets(1, &d3dRenderTargetView, nullptr);
+	d3dContext->ClearRenderTargetView(d3dRenderTargetView, colorf);
+}
+void Device::UpdateTexture(ITexture* texture, rectu32* rect, void* data)
+{
+	d3dContext->UpdateSubresource(texture->GetD3D11Texture2D(), 0, 
+		&D3D11Box(rect->left, rect->right, rect->top, rect->bottom),
+		data, (rect->right - rect->left) * 4, 0);
+}
+
+inline void Device::setStates(ID3D11InputLayout* d3dIL, ID3D11VertexShader* d3dVS, ID3D11PixelShader* d3dPS)
+{
+	d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	d3dContext->IASetInputLayout(d3dIL);
+	d3dContext->VSSetShader(d3dVS, nullptr, 0);
+	d3dContext->PSSetShader(d3dPS, nullptr, 0);
+	d3dContext->PSSetSamplers(0, 1, &d3dDefaultSS);
+	d3dContext->RSSetState(d3dDefaultRS);
+	d3dContext->OMSetBlendState(d3dAlphaBS, nullptr, 0xffffffff);
+	D3D11ContextPSSetConstantBuffers(d3dContext, 0, d3dTransformVSCB);
+}
+inline void Device::draw(void* vertices, uint32 vertexCount, uint32 vertexSize)
+{
+	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);
+
+	uint32 vertexLimitPerDraw = alignval(vertexColorLimit, 3);
+	for (uint32 drawBaseVertexIdx = 0; drawBaseVertexIdx < vertexCount; drawBaseVertexIdx += vertexLimitPerDraw)
+	{
+		uint32 vertexToDraw = minval(vertexCount - drawBaseVertexIdx, vertexLimitPerDraw);
+		d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0,
+			vertexSize * vertexToDraw), (void*)(uintptr(vertices) + drawBaseVertexIdx * vertexSize), 0, 0);
+		d3dContext->Draw(vertexToDraw, 0);
 	}
-	lastSamplerMode = mode;
 }
-void Render::SetBlendState(BlendState state)
+inline void Device::drawIndexedQuads(void* vertices, uint32 vertexCount, uint32 vertexSize)
 {
-	static BlendState lastBlendState = BlendState::None;
-	if (lastBlendState == state)
-		return;
+	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);
+	d3dContext->IASetIndexBuffer(d3dQuadIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
-	Flush();
-	switch (state)
+	uint32 vertexLimitPerDraw = alignval(vertexColorLimit, 4);
+	for (uint32 drawBaseVertexIdx = 0; drawBaseVertexIdx < vertexCount; drawBaseVertexIdx += vertexLimitPerDraw)
 	{
-	case BlendState::AlphaBlend:
-		dx.d3dContext->OMSetBlendState(dx.d3dBlendStateAlpha, nullptr, 0xffffffff);
-		break;
-	case BlendState::Clear:
-		dx.d3dContext->OMSetBlendState(dx.d3dBlendStateClear, nullptr, 0xffffffff);
-		break;
-	default:
-		return;
-	}
-	lastBlendState = state;
-}
-void Render::EnableIndexation(bool state)
-{
-	if (indexationEnabled != state)
-	{
-		Flush();
-		indexationEnabled = state;
+		uint32 vertexToDraw = minval(vertexCount - drawBaseVertexIdx, vertexLimitPerDraw);
+		d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0,
+			vertexSize * vertexToDraw), (void*)(uintptr(vertices) + drawBaseVertexIdx * vertexSize), 0, 0);
+		d3dContext->DrawIndexed(vertexToDraw / 4 * 6, 0, 0);
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-const DXGI_FORMAT defaultTextresFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-inline bool ITexture::InitITexture(uint32 x, uint32 y, void* data, uint32 bindFlags)
+void Device::DrawColored(VertexColor* vertices, uint32 vertexCount, bool indexedQuads)
 {
-	return SUCCEEDED(Render::dx.d3dDevice->CreateTexture2D(&D3D11Texture2DDesc(x, y, bindFlags),
+	setStates(d3dColorIL, d3dColorVS, d3dColorPS);
+	if (indexedQuads)
+		drawIndexedQuads(vertices, vertexCount, sizeof(VertexColor));
+	else
+		draw(vertices, vertexCount, sizeof(VertexColor));
+}
+void Device::DrawTextured(VertexTex* vertices, uint32 vertexCount, bool indexedQuads)
+{
+	setStates(d3dTexIL, d3dTexVS, d3dTexPS);
+	if (indexedQuads)
+		drawIndexedQuads(vertices, vertexCount, sizeof(VertexTex));
+	else
+		draw(vertices, vertexCount, sizeof(VertexTex));
+}
+void Device::DrawEllipses(VertexEllipse* vertices, uint32 vertexCount, bool indexedQuads)
+{
+	setStates(d3dEllipseIL, d3dEllipseVS, d3dEllipsePS);
+	if (indexedQuads)
+		drawIndexedQuads(vertices, vertexCount, sizeof(VertexEllipse));
+	else
+		draw(vertices, vertexCount, sizeof(VertexEllipse));
+}
+
+//--------------------------------Interfaces----------------------------------//
+
+inline bool ITexture::InitITexture(ID3D11Device* d3dDevice, uint32 x, uint32 y, void* data, uint32 bindFlags)
+{
+	return SUCCEEDED(d3dDevice->CreateTexture2D(&D3D11Texture2DDesc(x, y, bindFlags),
 		data ? &D3D11SubresourceData(data, x * 4) : nullptr, &d3dTexture));
 }
-inline bool IShaderResource::InitIShaderResource()
+inline bool IShaderResource::InitIShaderResource(ID3D11Device* d3dDevice)
 {
-	return SUCCEEDED(Render::dx.d3dDevice->CreateShaderResourceView(d3dTexture, nullptr, &d3dShaderResourceView));
+	return SUCCEEDED(d3dDevice->CreateShaderResourceView(d3dTexture, nullptr, &d3dShaderResourceView));
 }
-inline bool IRenderTarget::InitIRenderTarget()
+inline bool IRenderTarget::InitIRenderTarget(ID3D11Device* d3dDevice)
 {
-	return SUCCEEDED(Render::dx.d3dDevice->CreateRenderTargetView(d3dTexture, nullptr, &d3dRenderTargetView));
-}
-void ITexture::Update(rectu32* rect, void* data)
-{
-	Render::dx.d3dContext->UpdateSubresource(d3dTexture, 0, &D3D11Box(rect->left, rect->right, rect->top, rect->bottom),
-		data, (rect->right - rect->left) * 4, 0);
+	return SUCCEEDED(d3dDevice->CreateRenderTargetView(d3dTexture, nullptr, &d3dRenderTargetView));
 }
 uint32x2 ITexture::GetSize()
 {
@@ -284,29 +256,31 @@ uint32x2 ITexture::GetSize()
 }
 ITexture::~ITexture()
 {
-	SafeComObjectRelease(d3dTexture);
+	SafeComInterfaceRelease(d3dTexture);
 }
 IShaderResource::~IShaderResource()
 {
-	SafeComObjectRelease(d3dShaderResourceView);
+	SafeComInterfaceRelease(d3dShaderResourceView);
 }
 IRenderTarget::~IRenderTarget()
 {
-	SafeComObjectRelease(d3dRenderTargetView);
+	SafeComInterfaceRelease(d3dRenderTargetView);
 }
 
-bool Texture::Create(uint32 x, uint32 y, void* data)
+//--------------------------------Objects----------------------------------//
+
+bool Texture::Create(Device* device, uint32 x, uint32 y, void* data)
 {
 	bool result = true;
-	result &= InitITexture(x, y, data, D3D11_BIND_SHADER_RESOURCE);
-	result &= InitIShaderResource();
+	result &= InitITexture(device->GetD3DDevice(), x, y, data, D3D11_BIND_SHADER_RESOURCE);
+	result &= InitIShaderResource(device->GetD3DDevice());
 
 	if (result)
 		return true;
-	Release();
+	this->~Texture();
 	return false;
 }
-bool Texture::CreateFromPng(wchar_t* filename)
+/*bool Texture::CreateFromPng(wchar_t* filename)
 {
 	HANDLE hFile = CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
 	if (hFile == INVALID_HANDLE_VALUE)
@@ -328,69 +302,65 @@ bool Texture::CreateFromPng(wchar_t* filename)
 	bool result = Create(width, height, textureData);
 	free(textureData);
 	return result;
-}
-bool RenderTarget::Create(uint32 x, uint32 y, void* data)
+}*/
+bool RenderTarget::Create(Device* device, uint32 x, uint32 y, void* data)
 {
 	bool result = true;
-	result &= InitITexture(x, y, data, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
-	result &= InitIShaderResource();
-	result &= InitIRenderTarget();
+	result &= InitITexture(device->GetD3DDevice(), x, y, data, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
+	result &= InitIShaderResource(device->GetD3DDevice());
+	result &= InitIRenderTarget(device->GetD3DDevice());
 
 	if (result)
 		return true;
-	Release();
+	this->~RenderTarget();
 	return false;
 }
-bool SwapChain::CreateForComposition(IUnknown* panel, uint32 x, uint32 y)
+
+bool SwapChain::CreateForComposition(Device* device, IUnknown* panel, uint32 x, uint32 y)
 {
 	bool result = true;
 	ISwapChainBackgroundPanelNative *swapChainNativePanel;
 	if (FAILED(panel->QueryInterface(__uuidof(ISwapChainBackgroundPanelNative), (void**) &swapChainNativePanel)))
 		return false;
-	result &= SUCCEEDED(Render::dx.dxgiFactory->CreateSwapChainForComposition(Render::dx.d3dDevice,
-		&DXGISwapChainDesc1(x, y, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL), nullptr, &dxgiSwapChain));
+	result &= SUCCEEDED(Device::GetDXGIFactory()->CreateSwapChainForComposition(device->GetD3DDevice(),
+		&DXGISwapChainDesc1(x, y), nullptr, &dxgiSwapChain));
 	swapChainNativePanel->SetSwapChain(dxgiSwapChain);
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
-	result &= InitIRenderTarget();
+	result &= InitIRenderTarget(device->GetD3DDevice());
 
 	if (result)
 		return true;
-	Release();
+	this->~SwapChain();
 	return false;
 }
-bool SwapChain::CreateForHWnd(void* hWnd, uint32 x, uint32 y)
+bool SwapChain::CreateForHWnd(Device* device, void* hWnd, uint32 x, uint32 y)
 {
 	bool result = true;
-	result &= SUCCEEDED(Render::dx.dxgiFactory->CreateSwapChainForHwnd(Render::dx.d3dDevice, (HWND) hWnd,
-		&DXGISwapChainDesc1(x, y, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_EFFECT_SEQUENTIAL), nullptr, nullptr, &dxgiSwapChain));
+	result &= SUCCEEDED(Device::GetDXGIFactory()->CreateSwapChainForHwnd(device->GetD3DDevice(), (HWND) hWnd,
+		&DXGISwapChainDesc1(x, y), nullptr, nullptr, &dxgiSwapChain));
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
-	result &= InitIRenderTarget();
+	result &= InitIRenderTarget(device->GetD3DDevice());
 
 	if (result)
 		return true;
-	Release();
+	this->~SwapChain();
 	return false;
 }
 bool SwapChain::Resize(uint32 x, uint32 y)
 {
+	ID3D11Device *d3dDevice = nullptr;
+	d3dRenderTargetView->GetDevice(&d3dDevice);
+
+	SafeComInterfaceRelease(d3dRenderTargetView);
+	SafeComInterfaceRelease(d3dTexture);
 	bool result = true;
-	bool isActive = Render::d3dRenderTargetView == d3dRenderTargetView;
-
-	if (isActive)
-		Render::ResetTarget();
-
-	SafeComObjectRelease(d3dRenderTargetView);
-	SafeComObjectRelease(d3dTexture);
-	result &= SUCCEEDED(dxgiSwapChain->ResizeBuffers(0, x, y, TEXTURE_FORMAT, 0));
+	result &= SUCCEEDED(dxgiSwapChain->ResizeBuffers(0, x, y, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
-	result &= InitIRenderTarget();
-
-	if (isActive)
-		Render::SetTarget(this);
+	result &= InitIRenderTarget(d3dDevice);
 
 	if (result)
 		return true;
-	Release();
+	this->~SwapChain();
 	return false;
 }
 void SwapChain::Present(bool sync)
@@ -400,290 +370,5 @@ void SwapChain::Present(bool sync)
 }
 SwapChain::~SwapChain()
 {
-	SafeComObjectRelease(dxgiSwapChain);
-}
-
-bool TextFormat::Create()
-{
-	return texture.CreateFromPng(L"font.png");
-}
-
-//---------------------------------Private--------------------------------------//
-
-class _private abstract
-{
-	friend Render;
-
-private:
-	template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-	static inline void fillIndexedVerticesPosByRect(VertexType* vertexBuffer, const rectf32& rect)
-	{
-		vertexBuffer[a].pos.set(rect.left, rect.top);
-		vertexBuffer[b].pos.set(rect.right, rect.top);
-		vertexBuffer[c].pos.set(rect.right, rect.bottom);
-		vertexBuffer[d].pos.set(rect.left, rect.bottom);
-	}
-	template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-	static inline void fillIndexedVerticesPosByLine(VertexType* vertexBuffer, float32x2 start, float32x2 end, float width)
-	{
-		float32x2 v = end - start;
-		float tmp = v.x; v.x = v.y; v.y = -tmp;
-		v.normalize();
-		v *= width / 2.0f;
-		vertexBuffer[a].pos = start + v;
-		vertexBuffer[b].pos = end + v;
-		vertexBuffer[c].pos = end - v;
-		vertexBuffer[d].pos = start - v;
-	}
-	template <bool swapDim = false, uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-	static inline void fillIndexedVerticesTexByRect(VertexType* vertexBuffer, rectf32* rect)
-	{
-		if (rect)
-		{
-			if (swapDim)
-			{
-				vertexBuffer[a].tex.set(rect->top, rect->left);
-				vertexBuffer[b].tex.set(rect->top, rect->right);
-				vertexBuffer[c].tex.set(rect->bottom, rect->right);
-				vertexBuffer[d].tex.set(rect->bottom, rect->left);
-			}
-			else
-			{
-				vertexBuffer[a].tex.set(rect->left, rect->top);
-				vertexBuffer[b].tex.set(rect->right, rect->top);
-				vertexBuffer[c].tex.set(rect->right, rect->bottom);
-				vertexBuffer[d].tex.set(rect->left, rect->bottom);
-			}
-		}
-		else
-		{
-			if (swapDim)
-			{
-				vertexBuffer[a].tex.set(0.0f, 0.0f);
-				vertexBuffer[b].tex.set(0.0f, 1.0f);
-				vertexBuffer[c].tex.set(1.0f, 1.0f);
-				vertexBuffer[d].tex.set(1.0f, 0.0f);
-			}
-			else
-			{
-				vertexBuffer[a].tex.set(0.0f, 0.0f);
-				vertexBuffer[b].tex.set(1.0f, 0.0f);
-				vertexBuffer[c].tex.set(1.0f, 1.0f);
-				vertexBuffer[d].tex.set(0.0f, 1.0f);
-			}
-		}
-	}
-	template <uint32 a = 0, uint32 b = 1, uint32 c = 2, uint32 d = 3, typename VertexType>
-	static inline void fillIndexedVerticesOpacity(VertexType* vertexBuffer, float startOpacity, float endOpacity, Direction gradientDirection)
-	{
-		switch (gradientDirection)
-		{
-		case Direction::Right:
-			vertexBuffer[a].opacity = startOpacity;
-			vertexBuffer[b].opacity = endOpacity;
-			vertexBuffer[c].opacity = endOpacity;
-			vertexBuffer[d].opacity = startOpacity;
-			break;
-
-		case Direction::Left:
-			vertexBuffer[a].opacity = endOpacity;
-			vertexBuffer[b].opacity = startOpacity;
-			vertexBuffer[c].opacity = startOpacity;
-			vertexBuffer[d].opacity = endOpacity;
-			break;
-
-		case Direction::Down:
-			vertexBuffer[a].opacity = startOpacity;
-			vertexBuffer[b].opacity = startOpacity;
-			vertexBuffer[c].opacity = endOpacity;
-			vertexBuffer[d].opacity = endOpacity;
-			break;
-
-		case Direction::Up:
-			vertexBuffer[a].opacity = endOpacity;
-			vertexBuffer[b].opacity = endOpacity;
-			vertexBuffer[c].opacity = startOpacity;
-			vertexBuffer[d].opacity = startOpacity;
-			break;
-		}
-	}
-
-	template <typename VertexType>
-	static inline void fillVerticesPosByRect(VertexType* vertexBuffer, const rectf32& rect)
-	{
-		fillIndexedVerticesPosByRect<0, 1, 4, 2>(vertexBuffer, rect);
-		vertexBuffer[3].pos = vertexBuffer[1].pos;
-		vertexBuffer[5].pos = vertexBuffer[2].pos;
-	}
-	template <typename VertexType>
-	static inline void fillVerticesPosByLine(VertexType* vertexBuffer, float32x2 start, float32x2 end, float width)
-	{
-		fillIndexedVerticesPosByLine<0, 1, 4, 2>(vertexBuffer, start, end, width);
-		vertexBuffer[3].pos = vertexBuffer[1].pos;
-		vertexBuffer[5].pos = vertexBuffer[2].pos;
-	}
-	template <bool swapDim = false, typename VertexType>
-	static inline void fillVerticesTexByRect(VertexType* vertexBuffer, rectf32* rect)
-	{
-		fillIndexedVerticesTexByRect<swapDim, 0, 1, 4, 2>(vertexBuffer, rect);
-		vertexBuffer[3].tex = vertexBuffer[1].tex;
-		vertexBuffer[5].tex = vertexBuffer[2].tex;
-	}
-	template <typename VertexType>
-	static inline void fillVerticesOpacity(VertexType* vertexBuffer, float startOpacity, float endOpacity, Direction gradientDirection)
-	{
-		fillIndexedVerticesOpacity<0, 1, 4, 2>(vertexBuffer, startOpacity, endOpacity, gradientDirection);
-		vertexBuffer[3].opacity = vertexBuffer[1].opacity;
-		vertexBuffer[5].opacity = vertexBuffer[2].opacity;
-	}
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
-struct VertexColor		//24 bytes
-{
-	float32x2 pos;
-	float32x4 color;
-};
-struct VertexTex		//20 bytes
-{
-	float32x2 pos;
-	float32x2 tex;
-	float opactity;
-};
-struct VertexEllipse	//36 bytes
-{
-	float32x2 pos;
-	float32x2 tex;
-	float32x4 color;
-	float innerRadius;
-};
-
-const uint32 vertexBufferLayersCount = 4;
-const uint32 vertexBufferPageSize = 1 << 12;
-const uint32 vertexBufferPagesLimit = 1 << 6;	//limit - uint8 max
-const uint32 colorVerticesPerPage = vertexBufferPageSize / sizeof(VertexColor);
-const uint32 texVerticesPerPage = vertexBufferPageSize / sizeof(VertexTex);
-const uint32 ellipseVerticesPerPage = vertexBufferPageSize / sizeof(VertexEllipse);
-const uint32 texPrimitivesPerPage = texVerticesPerPage / 4;		//only indexed drawing
-const uint32 texSegmentsPerLayerLimit = 1 << 4;
-const uint32 pagesPerTexSegmentLimit = 1 << 4;
-const uint32 pagesPerColorSegmentLimit = 1 << 6;
-const uint32 pagesPerEllipseSegmentLimit = 1 << 6;
-
-union VertexBufferPage
-{
-	uint8 raw[vertexBufferPageSize];
-	VertexColor color[colorVerticesPerPage];
-	VertexTex tex[texVerticesPerPage];
-	VertexEllipse ellipse[ellipseVerticesPerPage];
-} vertexBuffer[vertexBufferPagesLimit] = { 0 };
-uint32 vertexBufferAllocatedPagesCount = 0;
-
-struct VertexBufferLayerDesc
-{
-	struct TexSegment
-	{
-		uint8 pages[pagesPerTexSegmentLimit];
-		uint32 primitivesCount;
-		ID3D11ShaderResourceView *d3dShaderResourceView;
-	} texSegments[texSegmentsPerLayerLimit];
-	uint8 colorSegmentPages[pagesPerColorSegmentLimit];
-	uint8 ellipseSegmentPages[pagesPerEllipseSegmentLimit];
-	uint32 colorVertexCount;
-	uint32 ellipseVertexCount;
-} vertexBufferLayers[vertexBufferLayersCount] = { 0 };
-
-inline VertexTex* allocateTexVertices(uint32 layerIdx, ID3D11ShaderResourceView* d3dSRV)
-{
-	VertexBufferLayerDesc *layer = &vertexBufferLayers[layerIdx];
-	for (uint32 i = 0; i < texSegmentsPerLayerLimit; i++)
-	{
-		VertexBufferLayerDesc::TexSegment *segment = &layer->texSegments[i];
-		if (segment->d3dShaderResourceView == d3dSRV)
-		{
-			if (segment->primitivesCount % texPrimitivesPerPage)
-			{
-				VertexTex *result = &vertexBuffer[segment->pages[segment->primitivesCount / texPrimitivesPerPage]].tex[(segment->primitivesCount % texPrimitivesPerPage) * 4];
-				segment->primitivesCount++;
-				return result;
-			}
-			else
-			{
-				if (segment->primitivesCount + 1 < pagesPerTexSegmentLimit * texPrimitivesPerPage)
-				{
-					if (vertexBufferAllocatedPagesCount < vertexBufferPagesLimit)
-					{
-						segment->primitivesCount++;
-						segment->pages[segment->primitivesCount / texPrimitivesPerPage] = vertexBufferAllocatedPagesCount++;
-						return vertexBuffer[segment->pages[segment->primitivesCount / texPrimitivesPerPage]].tex;
-					}
-					else
-						break;
-				}
-				else
-					continue;
-			}
-		}
-
-		if (segment->d3dShaderResourceView == nullptr)
-		{
-			if (vertexBufferAllocatedPagesCount < vertexBufferPagesLimit)
-			{
-				segment->d3dShaderResourceView = d3dSRV;
-				segment->pages[0] = vertexBufferAllocatedPagesCount++;
-				segment->primitivesCount = 1;
-				return vertexBuffer[segment->pages[0]].tex;
-			}
-			else
-				break;
-		}
-	}
-
-	Render::Flush();
-	vertexBufferAllocatedPagesCount = 1;
-	layer->texSegments[0].d3dShaderResourceView = d3dSRV;
-	layer->texSegments[0].pages[0] = 0;
-	layer->texSegments[0].primitivesCount = 1;
-
-	return vertexBuffer[0].tex;
-}
-inline VertexColor* allocateColorVertices(uint32 layerIdx, uint32 verticesToAllocate)
-{
-	VertexBufferLayerDesc *layer = &vertexBufferLayers[layerIdx];
-	if ((layer->colorVertexCount + verticesToAllocate) / colorVerticesPerPage < pagesPerColorSegmentLimit)
-	{
-		if (layer->colorVertexCount % colorVerticesPerPage <= colorVerticesPerPage - verticesToAllocate)
-		{
-			VertexColor *result = &vertexBuffer[layer->colorSegmentPages[layer->colorVertexCount / colorVerticesPerPage]].color[layer->colorVertexCount % colorVerticesPerPage];
-			layer->colorVertexCount += verticesToAllocate;
-			return result;
-		}
-		else
-		{
-			if (vertexBufferAllocatedPagesCount < vertexBufferPagesLimit)
-			{
-				layer->colorVertexCount += verticesToAllocate;
-				layer->colorSegmentPages[layer->colorVertexCount / colorVerticesPerPage] = vertexBufferAllocatedPagesCount++;
-				return vertexBuffer[layer->colorSegmentPages[layer->colorVertexCount / colorVerticesPerPage]].color;
-			}
-		}
-	}
-
-	Render::Flush();
-	vertexBufferAllocatedPagesCount = 1;
-	layer->colorSegmentPages[0] = 0;
-	layer->colorVertexCount = verticesToAllocate;
-
-	return vertexBuffer[0].color;
-}
-inline VertexEllipse* allocateEllipseVertices(uint32 layerIdx, uint32 verticesToAllocate)
-{
-	VertexBufferLayerDesc *layer = &vertexBufferLayers[layerIdx];
-}
-
-void Render::DrawBitmap(IShaderResource* bitmap, rectf32* destRect, uint32 layer, float opacity, rectf32* srcRect, bool swapDim)
-{
-	if (!bitmap->d3dShaderResourceView) return;
-	if (layer > vertexBufferLayersCount) return;
+	SafeComInterfaceRelease(dxgiSwapChain);
 }

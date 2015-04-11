@@ -1,8 +1,18 @@
 #include <extypes.h>
-#include <extypes.util.h>
 #include <extypes.vectors.h>
 
 struct IUnknown;
+
+struct IDXGIFactory3;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct ID3D11InputLayout;
+struct ID3D11VertexShader;
+struct ID3D11PixelShader;
+struct ID3D11Buffer;
+struct ID3D11RasterizerState;
+struct ID3D11BlendState;
+
 struct ID3D11RenderTargetView;
 struct ID3D11ShaderResourceView;
 struct ID3D11Texture2D;
@@ -12,8 +22,6 @@ struct matrix3x2;
 
 namespace Render2D
 {
-	class Render;
-
 	enum class Direction : uint8
 	{
 		None = 0,
@@ -86,87 +94,78 @@ namespace Render2D
 
 	//--------------------------------Interfaces----------------------------------//
 
+	class Device;
+
 	class INoncopyable abstract
 	{
 	private:
-		inline INoncopyable(const INoncopyable&);
-		inline INoncopyable& operator= (const INoncopyable&);
+		INoncopyable(const INoncopyable&) = delete;
+		INoncopyable& operator= (const INoncopyable&) = delete;
 
 	public:
-		inline INoncopyable() {}
-		inline ~INoncopyable() {}
+		INoncopyable() = default;
+		~INoncopyable() = default;
 	};
 
 	class ITexture abstract : public INoncopyable
 	{
-		friend Render;
-
 	protected:
 		ID3D11Texture2D *d3dTexture;
 
-		inline bool InitITexture(uint32 x, uint32 y, void* data, uint32 bindFlags);
+		inline bool InitITexture(ID3D11Device* d3dDevice, uint32 x, uint32 y, void* data, uint32 bindFlags);
 
 	public:
 		inline ITexture() : d3dTexture(nullptr) {}
 		~ITexture();
 
 		uint32x2 GetSize();
-		void Update(rectu32* rect, void* data);
+		inline ID3D11Texture2D* GetD3D11Texture2D() { return d3dTexture; }
 	};
 
 	class IShaderResource abstract : virtual public ITexture
 	{
-		friend Render;
-
 	protected:
 		ID3D11ShaderResourceView *d3dShaderResourceView;
 
-		inline bool InitIShaderResource();
+		inline bool InitIShaderResource(ID3D11Device* d3dDevice);
 
 	public:
 		inline IShaderResource() : d3dShaderResourceView(nullptr) {}
 		~IShaderResource();
+
+		inline ID3D11ShaderResourceView* GetD3D11ShaderResourceView() { return d3dShaderResourceView; }
 	};
 
 	class IRenderTarget abstract : virtual public ITexture
 	{
-		friend Render;
-
 	protected:
 		ID3D11RenderTargetView *d3dRenderTargetView;
 
-		inline bool InitIRenderTarget();
+		inline bool InitIRenderTarget(ID3D11Device* d3dDevice);
 
 	public:
 		inline IRenderTarget() : d3dRenderTargetView(nullptr) {}
 		~IRenderTarget();
+
+		inline ID3D11RenderTargetView* GetD3D11RenderTargetView() { return d3dRenderTargetView; }
 	};
+
+	//--------------------------------Objects----------------------------------//
 
 	class Texture : public IShaderResource
 	{
-		friend Render;
-
 	public:
-		bool Create(uint32 x, uint32 y, void* data = nullptr);
-		bool CreateFromPng(wchar_t* filename);
-		inline bool Create(uint32x2 size, void* data = nullptr) { return Create(size.x, size.y, data); }
-		inline void Release() { this->~Texture(); }
+		bool Create(Device* device, uint32 x, uint32 y, void* data = nullptr);
 	};
 
 	class RenderTarget : public IShaderResource, public IRenderTarget
 	{
-		friend Render;
-
 	public:
-		bool Create(uint32 x, uint32 y, void* data = nullptr);
-		inline bool Create(uint32x2 size, void* data = nullptr) { return Create(size.x, size.y, data); }
-		inline void Release() { this->~RenderTarget(); }
+		bool Create(Device* device, uint32 x, uint32 y, void* data = nullptr);
 	};
 
 	class SwapChain : public IRenderTarget
 	{
-		friend Render;
-
 	private:
 		IDXGISwapChain1 *dxgiSwapChain;
 
@@ -174,297 +173,164 @@ namespace Render2D
 		inline SwapChain() : dxgiSwapChain(nullptr) {}
 		~SwapChain();
 
-		bool CreateForComposition(IUnknown* panel, uint32 x, uint32 y);
-		bool CreateForHWnd(void* hWnd, uint32 x, uint32 y);
-		inline bool CreateForComposition(IUnknown* panel, uint32x2 size) { return CreateForComposition(panel, size.x, size.y); }
-		inline bool CreateForHWnd(void* hWnd, uint32x2 size) { return CreateForHWnd(hWnd, size.x, size.y); }
-		inline void Release() { this->~SwapChain(); }
+		bool CreateForComposition(Device* device, IUnknown* panel, uint32 x, uint32 y);
+		bool CreateForHWnd(Device* device, void* hWnd, uint32 x, uint32 y);
 		bool Resize(uint32 x, uint32 y);
-		inline bool Resize(uint32x2 size) { return Resize(size.x, size.y); }
 		void Present(bool sync = true);
 	};
 
-	class TextFormat : public INoncopyable
+	//-----------------------------------Device-------------------------------------//
+
+	struct VertexColor	//12 bytes, 6 floats
 	{
-		friend Render;
+		float32x2 pos;
+		coloru32 color;
+	};
+	struct VertexTex	//20 bytes, 5 floats
+	{
+		float32x2 pos;
+		float32x2 tex;
+		float alpha;
+	};
+	struct VertexEllipse	//24 bytes, 9 floats
+	{
+		float32x2 pos;
+		float32x2 tex;
+		float innerRadius;
+		coloru32 color;
+	};
 
+	class Device : public INoncopyable
+	{
 	private:
-		static const uint32 height = 14, width = 8;
+		static IDXGIFactory3 *dxgiFactory;
 
-		Texture texture;
+		ID3D11Device *d3dDevice;
+		ID3D11DeviceContext *d3dContext;
+
+		ID3D11InputLayout *d3dColorIL, *d3dTexIL, *d3dEllipseIL;
+		ID3D11VertexShader *d3dColorVS, *d3dTexVS, *d3dEllipseVS;
+		ID3D11PixelShader *d3dColorPS, *d3dTexPS, *d3dEllipsePS;
+
+		ID3D11Buffer *d3dVertexBuffer, *d3dQuadIndexBuffer, *d3dTransformVSCB;
+
+		ID3D11RasterizerState *d3dDefaultRS;
+		ID3D11SamplerState *d3dDefaultSS;
+		ID3D11BlendState *d3dAlphaBS;
+
+		inline void setStates(ID3D11InputLayout* d3dIL, ID3D11VertexShader* d3dVS, ID3D11PixelShader* d3dPS);
+		inline void draw(void* vertices, uint32 vertexCount, uint32 vertexSize);
+		inline void drawIndexedQuads(void* vertices, uint32 vertexCount, uint32 vertexSize);
+
+		static const uint32 vertexBufferSize = 0x4000;
+		static const uint32 vertexColorLimit = vertexBufferSize / sizeof(VertexColor);
+		static const uint32 vertexTexLimit = vertexBufferSize / sizeof(VertexTex);
+		static const uint32 vertexEllipseLimit = vertexBufferSize / sizeof(VertexEllipse);
+		static const uint32 indexedQuadsLimit = vertexColorLimit / 6;
 
 	public:
-		inline TextFormat() {}
+		Device();
+		~Device();
 
 		bool Create();
+
+		void SetTarget(IRenderTarget* target);
+		void SetTexture(IShaderResource* texture);
+		void SetTransform(matrix3x2& _transform);
+
+		void Clear(IRenderTarget* target, coloru32 color);
+		void Clear(coloru32 color);
+		void UpdateTexture(ITexture* texture, rectu32* rect, void* data);
+
+		void DrawColored(VertexColor* vertices, uint32 vertexCount, bool indexedQuads);
+		void DrawTextured(VertexTex* vertices, uint32 vertexCount, bool indexedQuads);
+		void DrawEllipses(VertexEllipse* vertices, uint32 vertexCount, bool indexedQuads);
+
+		static inline IDXGIFactory3* GetDXGIFactory() { return dxgiFactory; }
+		inline ID3D11Device* GetD3DDevice() { return d3dDevice; }
+		inline ID3D11DeviceContext* GetD3DDeviceContext() { return d3dContext; }
 	};
 
-	//-----------------------------------Render-------------------------------------//
+	//-----------------------------------Batches-------------------------------------//
 
-	enum class SamplerMode : uint8
+	class UniversalBatch
 	{
-		None = 0,
-		Linear_TextAddressMirrorOnce = 1,
-		Linear_TextAddressWrap = 2,
-		Default = Linear_TextAddressMirrorOnce,
-	};
-	enum class BlendState : uint8
-	{
-		None = 0,
-		AlphaBlend = 1,
-		Clear = 2,
-		Default = AlphaBlend,
-	};
-
-	class Render abstract
-	{
-		friend ITexture;
-		friend IShaderResource;
-		friend IRenderTarget;
-
-		friend Texture;
-		friend RenderTarget;
-		friend SwapChain;
+	private:
 
 	public:
-		static void Init();
-		//static void Destroy();
 
-		static void Flush();
-		static void Discard();
-
-		static void SetTarget(IRenderTarget *target);
-		static void ResetTarget();
-		static void Clear(IRenderTarget* target, coloru32 color);
-		static void Clear(coloru32 color);
-		static void SetTransform(const matrix3x2& transform);
-
-		static void SetSamplerMode(SamplerMode mode);
-		static void SetBlendState(BlendState state);
-		static void EnableIndexation(bool state);
-
-		
-		static void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, uint32 layer = 0,
-			float opacity = 1.0f, rectf32* srcRect = nullptr, bool swapDim = false);
-		static void DrawBitmap(IShaderResource* bitmap, rectf32* destRect, float startOpacity, float endOpacity, 
-			Direction opacityGradientDirection, uint32 layer = 0, rectf32* srcRect = nullptr, bool swapDim = false);
-
-
-
-		{
-			if (!bitmap->d3dShaderResourceView) return;
-			float ext = -((float) pushTextureInSlot(bitmap->d3dShaderResourceView) + 0.4f);
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillIndexedVerticesPosByRect(currentVertexBuffer, *destRect);
-				_private::fillIndexedVerticesTexByRect<swapSrcDim>(currentVertexBuffer, srcRect);
-				_private::fillIndexedVerticesOpacity(currentVertexBuffer, startOpacity, endOpacity, opacityGradientDirection);
-				for (uint32 i = 0; i < 4; i++)
-					currentVertexBuffer[i].ext = ext;
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillVerticesPosByRect(currentVertexBuffer, *destRect);
-				_private::fillVerticesTexByRect<swapSrcDim>(currentVertexBuffer, srcRect);
-				_private::fillVerticesOpacity(currentVertexBuffer, startOpacity, endOpacity, opacityGradientDirection);
-				for (uint32 i = 0; i < 6; i++)
-					currentVertexBuffer[i].ext = ext;
-				vertexCount += 6;
-			}
-		}
-		template <bool swapSrcDim = false>
-		static inline void DrawBitmap(IShaderResource* bitmap, float32x2 start, float32x2 end, float width, rectf32* srcRect, float opacity)
-		{
-			if (!bitmap->d3dShaderResourceView) return;
-			float ext = -((float) pushTextureInSlot(bitmap->d3dShaderResourceView) + 0.4f);
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillIndexedVerticesPosByLine(currentVertexBuffer, start, end, width);
-				_private::fillIndexedVerticesTexByRect<swapSrcDim>(currentVertexBuffer, srcRect);
-				for (uint32 i = 0; i < 4; i++)
-				{
-					currentVertexBuffer[i].opacity = opacity;
-					currentVertexBuffer[i].ext = ext;
-				}
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillVerticesPosByLine(currentVertexBuffer, start, end, width);
-				_private::fillVerticesTexByRect<swapSrcDim>(currentVertexBuffer, srcRect);
-				for (uint32 i = 0; i < 6; i++)
-				{
-					currentVertexBuffer[i].opacity = opacity;
-					currentVertexBuffer[i].ext = ext;
-				}
-				vertexCount += 6;
-			}
-		}
-		static inline void DrawFillRect(rectf32* destRect, coloru32 color)
-		{
-			float32x4_nc colorf;
-			color.toFloat4Unorm((float*) &colorf);
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillIndexedVerticesPosByRect(currentVertexBuffer, *destRect);
-				for (uint32 i = 0; i < 4; i++)
-					currentVertexBuffer[i].color = colorf;
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillVerticesPosByRect(currentVertexBuffer, *destRect);
-				for (uint32 i = 0; i < 6; i++)
-					currentVertexBuffer[i].color = colorf;
-				vertexCount += 6;
-			}
-		}
-		static inline void DrawLine(float32x2 start, float32x2 end, coloru32 color, float width = 1.0f)
-		{
-			float32x4_nc colorf;
-			color.toFloat4Unorm((float*) &colorf);
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillIndexedVerticesPosByLine(currentVertexBuffer, start, end, width);
-				for (uint32 i = 0; i < 4; i++)
-					currentVertexBuffer[i].color = colorf;
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillVerticesPosByLine(currentVertexBuffer, start, end, width);
-				for (uint32 i = 0; i < 6; i++)
-					currentVertexBuffer[i].color = colorf;
-				vertexCount += 6;
-			}
-		}
-		static inline void DrawTriangle(float32x2* vertices, coloru32 color)
-		{
-			if (indexationEnabled)
-				return;
-
-			float32x4_nc colorf;
-			color.toFloat4Unorm((float*) &colorf);
-			if (vertexCount + 3 > vertexLimit)
-				Flush();
-			VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-			for (uint32 i = 0; i < 3; i++)
-			{
-				currentVertexBuffer[i].pos = vertices[i];
-				currentVertexBuffer[i].color = colorf;
-			}
-			vertexCount += 3;
-		}
-		static inline void DrawQuadrangle(float32x2* vertices, coloru32 color)
-		{
-			float32x4_nc colorf;
-			color.toFloat4Unorm((float*) &colorf);
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				for (uint32 i = 0; i < 4; i++)
-				{
-					currentVertexBuffer[i].pos = vertices[i];
-					currentVertexBuffer[i].color = colorf;
-				}
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				currentVertexBuffer[0].pos = vertices[0];
-				currentVertexBuffer[1].pos = vertices[1];
-				currentVertexBuffer[4].pos = vertices[2];
-				currentVertexBuffer[2].pos = vertices[3];
-				currentVertexBuffer[3].pos = currentVertexBuffer[1].pos;
-				currentVertexBuffer[5].pos = currentVertexBuffer[2].pos;
-				for (uint32 i = 0; i < 6; i++)
-					currentVertexBuffer[i].color = colorf;
-				vertexCount += 6;
-			}
-		}
-		static inline void DrawEllipse(float32x2 center, float radius, coloru32 color, float width)
-		{
-			float innerEllipse = (1.0f - width / radius) / 2.0f;
-			rectf32 destRect(center.x - radius, center.y - radius, center.x + radius, center.y + radius);
-			if (indexationEnabled)
-			{
-				if (vertexCount + 4 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillIndexedVerticesPosByRect(currentVertexBuffer, destRect);
-				_private::fillIndexedVerticesTexByRect(currentVertexBuffer, nullptr);
-				for (uint32 i = 0; i < 4; i++)
-				{
-					currentVertexBuffer[i].tex.x += (float)color.r;
-					currentVertexBuffer[i].tex.y += (float)color.g;
-					currentVertexBuffer[i].ext = -(4.0f + (float) color.b / 256.0f + (float) color.a);
-					currentVertexBuffer[i].opacity = innerEllipse;
-				}
-				vertexCount += 4;
-			}
-			else
-			{
-				if (vertexCount + 6 > vertexLimit)
-					Flush();
-				VertexBasic *currentVertexBuffer = vertexBuffer + vertexCount;
-				_private::fillVerticesPosByRect(currentVertexBuffer, destRect);
-				_private::fillVerticesTexByRect(currentVertexBuffer, nullptr);
-				for (uint32 i = 0; i < 6; i++)
-				{
-					currentVertexBuffer[i].tex.x += (float) color.r;
-					currentVertexBuffer[i].tex.y += (float) color.g;
-					currentVertexBuffer[i].ext = -(4.0f + (float) color.b / 256.0f + (float) color.a);
-					currentVertexBuffer[i].opacity = innerEllipse;
-				}
-				vertexCount += 6;
-			}
-		}
-		static inline void DrawEllipse(float32x2 center, float radius, coloru32 color)
-		{
-			DrawEllipse(center, radius, color, radius);
-		}
-#undef DrawText
-		static inline void DrawText(float32x2 position, float size, char* text, uint32 length, TextFormat* textFormat)
-		{
-			unsigned char *_text = (unsigned char*) text;
-			for (uint32 i = 0; i < length; i++)
-			{
-				int charIndex = (int)(unsigned char) text[i];
-				float width = size * textFormat->width / textFormat->height;
-				rectf32 rect(position.x, position.y, position.x + width, position.y + size);
-				DrawBitmap(&textFormat->texture, &rect, &rectf32((float) charIndex / 256.0f, 0.0f, (float) (charIndex + 1) / 256.0f, 1.0f));
-				position.x += width;
-			}
-		}
 	};
+
+	/*class FastLinearAllocator
+	{
+	private:
+		void *buffer;
+		uintptr bufferSize, usedSize;
+
+	public:
+		FastLinearAllocator(uintptr initialSize);
+		~FastLinearAllocator();
+
+		void *Allocate(uintptr size);
+		void Reset();
+	};
+
+	class Batch
+	{
+	private:
+
+	public:
+
+	};
+
+	template<uint layersNumber, uint bufferAllocDepth, uint firstLayerBufferSize = 32>
+	class LayeredBatch
+	{
+	private:
+		struct
+		{
+			struct
+			{
+				VertexColor *buffers[bufferAllocDepth];
+				uint32 allocBuffersCount;
+				uint32 lastBufferSize, lastBufferUsedSize;
+			} color;
+			struct
+			{
+				VertexTex *buffers[bufferAllocDepth];
+				uint32 allocBuffersCount;
+				uint32 lastBufferSize, lastBufferUsedSize;
+				TexturePack *texturePack;
+			} tex;
+			struct
+			{
+				VertexEllipse *buffers[bufferAllocDepth];
+				uint32 allocBuffersCount;
+				uint32 lastBufferSize, lastBufferUsedSize;
+			} ellipse;
+		} layers[layersNumber];
+		
+		FastLinearAllocator allocator;
+
+	public:
+		LayeredBatch(uint32 globalBufferInitialSize = 0x1000) : allocator(globalBufferInitialSize)
+		{
+			for (uint32 layerIdx = 0; layerIdx < layersNumber; layerIdx++)
+			{
+				layers[layerIdx].color.allocBuffersCount = 0;
+				layers[layerIdx].color.lastBufferSize = 0;
+				layers[layerIdx].tex.allocBuffersCount = 0;
+				layers[layerIdx].tex.lastBufferSize = 0;
+				layers[layerIdx].tex.texturePack = nullptr;
+				layers[layerIdx].ellipse.allocBuffersCount = 0;
+				layers[layerIdx].ellipse.lastBufferSize = 0;
+			}
+		}
+		~LayeredBatch() {}
+		void PushTexture(uint32 layer, const rectf32& destRect, const rectf32& srcRect, uint32 textureId);
+		void PushRect(uint32 layer, const rectf32& destRect, coloru32 color);
+		void PushEllipse(uint32 layer, const rectf32& destRect, coloru32 color, float innerRadius = -1.0f);
+		void Clear();
+		void BindLayerToTexturePack(uint32 layer, TexturePack* texturePack);
+	};*/
 }

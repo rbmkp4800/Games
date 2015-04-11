@@ -6,11 +6,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Render2D.h" />
-    <ClInclude Include="Source\DXHelper.h" />
     <ClInclude Include="Source\LodePNG\lodepng.h" />
+    <ClInclude Include="Source\D3DHelper.h" />
+    <ClInclude Include="Source\DXGIHelper.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Source\Shaders\HLSL\psBasic.hlsl" />
-    <FxCompile Include="Source\Shaders\HLSL\vsBasic.hlsl" />
+    <FxCompile Include="Source\Shaders\vsColor.hlsl" />
+    <FxCompile Include="Source\Shaders\vsTex.hlsl" />
+    <FxCompile Include="Source\Shaders\vsEllipse.hlsl" />
+    <FxCompile Include="Source\Shaders\psColor.hlsl" />
+    <FxCompile Include="Source\Shaders\psTex.hlsl" />
+    <FxCompile Include="Source\Shaders\psEllipse.hlsl" />
   </ItemGroup>
 </Project>

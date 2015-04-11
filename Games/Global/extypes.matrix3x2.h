@@ -195,13 +195,13 @@ struct matrix3x2
 	}
 };
 
-inline float32x2 operator * (float32x2 vector, matrix3x2 matrix)
+inline float32x2 operator * (float32x2& vector, matrix3x2& matrix)
 {
 	return float32x2(
 		matrix.data[0][0] * vector.x + matrix.data[1][0] * vector.y + matrix.data[2][0],
 		matrix.data[0][1] * vector.x + matrix.data[1][1] * vector.y + matrix.data[2][1]);
 }
-inline matrix3x2 operator * (matrix3x2 a, matrix3x2 b)
+inline matrix3x2 operator * (matrix3x2& a, matrix3x2& b)
 {
 	matrix3x2 result;
 	result.data[0][0] = a.data[0][0] * b.data[0][0] + a.data[1][0] * b.data[0][1];

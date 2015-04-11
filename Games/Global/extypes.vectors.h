@@ -5,199 +5,321 @@
 
 #include "extypes.h"
 
-struct uint32x2
+template <typename type>
+struct varx2
 {
-	uint32 x, y;
+	type x, y;
 
-	inline uint32x2() = default;
-	inline uint32x2(uint32 _x, uint32 _y) : x(_x), y(_y) {}
-	inline void set(uint32 _x, uint32 _y) { x = _x; y = _y; }
+	inline varx2() = default;
+	inline varx2(type _x, type _y) : x(_x), y(_y) {}
+	inline void set(type _x, type _y) { x = _x; y = _y; }
 
 	inline float aspect() { return (float) x / (float) y; }
-};
-struct int32x2
-{
-	int32 x, y;
+	inline type multiply() { return x * y; }
 
-	inline int32x2() = default;
-	inline int32x2(int32 _x, int32 _y) : x(_x), y(_y) {}
-	inline void set(int32 _x, int32 _y) { x = _x; y = _y; }
+	template <typename _type> inline bool operator == (varx2<_type>& val)
+	{
+		return x == val.x && y == val.y;
+	}
 
-	inline float aspect() { return (float) x / (float) y; }
-};
+	template <typename _type> inline varx2<type> operator + (varx2<_type>& val)
+	{
+		return varx2<type>(x + val.x, y + val.y);
+	}
+	template <typename _type> inline varx2<type> operator - (varx2<_type>& val)
+	{
+		return varx2<type>(x - val.x, y - val.y);
+	}
+	template <typename _type> inline varx2<type> operator * (varx2<_type>& val)
+	{
+		return varx2<type>(x * val.x, y * val.y);
+	}
+	template <typename _type> inline varx2<type> operator / (varx2<_type>& val)
+	{
+		return varx2<type>(x / val.x, y / val.y);
+	}
+	template <typename _type> inline varx2<type> operator * (_type& val)
+	{
+		return varx2<type>(x * val, y * val);
+	}
+	template <typename _type> inline varx2<type> operator / (_type& val)
+	{
+		return varx2<type>(x / val, y / val);
+	}
 
-struct uint32x3
-{
-	uint32 x, y, z;
-
-	inline uint32x3() = default;
-	inline uint32x3(uint32 _x, uint32 _y, uint32 _z) : x(_x), y(_y), z(_z) {}
-};
-
-struct uint32x4
-{
-	uint32 x, y, z, w;
-
-	inline uint32x4() = default;
-	inline uint32x4(uint32 _x, uint32 _y, uint32 _z, uint32 _w) : x(_x), y(_y), z(_z), w(_w) {}
-};
-
-__declspec(align(2)) struct uint16x3
-{
-	uint16 x, y, z;
-
-	inline uint16x3() = default;
-	inline uint16x3(uint16 _x, uint16 _y, uint16 _z) : x(_x), y(_y), z(_z) {}
-	inline void set(uint16 _x, uint16 _y, uint16 _z) { x = _x; y = _y; z = _z; }
-};
-
-struct uint16x4
-{
-	uint16 x, y, z, w;
-
-	inline uint16x4() = default;
-	inline uint16x4(uint16 _x, uint16 _y, uint16 _z, uint16 _w) : x(_x), y(_y), z(_z), w(_w) {}
-	inline void set(uint16 _x, uint16 _y, uint16 _z, uint16 _w) { x = _x; y = _y; z = _z; w = _w; }
-};
-
-struct uint16x2
-{
-	uint16 x, y;
-
-	inline uint16x2() = default;
-	inline uint16x2(uint16 _x, uint16 _y) : x(_x), y(_y) {}
-	inline void set(uint16 _x, uint16 _y) { x = _x; y = _y; }
-
-	inline float aspect() { return (float) x / (float) y; }
-	inline uint32 multiply() { return x * y; }
-};
-
-struct int16x2
-{
-	int16 x, y;
-
-	inline int16x2() = default;
-	inline int16x2(int16 _x, int16 _y) : x(_x), y(_y) {}
-
-	inline void set(int16 _x, int16 _y) { x = _x; y = _y; }
-
-	inline int16x2 add(int16 _x, int16 _y) { return int16x2(x + _x, y + _y); }
-	inline float aspect() { return (float) x / (float) y; }
-	inline int32 multiply() { return x * y; }
+	template <typename _type> inline varx2<type>& operator += (varx2<_type>& val)
+	{
+		x += val.x; y += val.y;
+		return *this;
+	}
+	template <typename _type> inline varx2<type>& operator -= (varx2<_type>& val)
+	{
+		x -= val.x; y -= val.y;
+		return *this;
+	}
+	template <typename _type> inline varx2<type>& operator *= (varx2<_type>& val)
+	{
+		x *= val.x; y *= val.y;
+		return *this;
+	}
+	template <typename _type> inline varx2<type>& operator /= (varx2<_type>& val)
+	{
+		x /= val.x; y /= val.y;
+		return *this;
+	}
+	template <typename _type> inline varx2<type>& operator *= (_type& val)
+	{
+		x *= val; y *= val;
+		return *this;
+	}
+	template <typename _type> inline varx2<type>& operator /= (_type& val)
+	{
+		x /= val; y /= val;
+		return *this;
+	}
 };
 
-__declspec(align(2)) struct uint8x2
+template <typename type>
+struct varx3
 {
-	uint8 x, y;
+	type x, y, z;
 
-	inline uint8x2() = default;
-	inline uint8x2(uint8 _x, uint8 _y) : x(_x), y(_y) {}
+	inline varx3() = default;
+	inline varx3(type _x, type _y, type _z) : x(_x), y(_y), z(_z) {}
+	inline void set(type _x, type _y, type _z) { x = _x; y = _y; z = _z; }
 
-	inline void set(uint8 _x, uint8 _y) { x = _x; y = _y; }
+	template <typename _type> inline bool operator == (varx3<_type>& val)
+	{
+		return x == val.x && y == val.y && z == val.z;
+	}
+
+	template <typename _type> inline varx3<type> operator + (varx3<_type>& val)
+	{
+		return varx3<type>(x + val.x, y + val.y, z + val.z);
+	}
+	template <typename _type> inline varx3<type> operator - (varx3<_type>& val)
+	{
+		return varx3<type>(x - val.x, y - val.y, z - val.z);
+	}
+	template <typename _type> inline varx3<type> operator * (varx3<_type>& val)
+	{
+		return varx3<type>(x * val.x, y * val.y, z * val.z);
+	}
+	template <typename _type> inline varx3<type> operator / (varx3<_type>& val)
+	{
+		return varx3<type>(x / val.x, y / val.y, z / val.z);
+	}
+	template <typename _type> inline varx3<type> operator * (_type& val)
+	{
+		return varx3<type>(x * val, y * val, z * val);
+	}
+	template <typename _type> inline varx3<type> operator / (_type& val)
+	{
+		return varx3<type>(x / val, y / val, z / val);
+	}
+
+	template <typename _type> inline varx3<type>& operator += (varx3<_type>& val)
+	{
+		x += val.x; y += val.y; z += val.z;
+		return *this;
+	}
+	template <typename _type> inline varx3<type>& operator -= (varx3<_type>& val)
+	{
+		x -= val.x; y -= val.y; z -= val.z;
+		return *this;
+	}
+	template <typename _type> inline varx3<type>& operator *= (varx3<_type>& val)
+	{
+		x *= val.x; y *= val.y; z *= val.z;
+		return *this;
+	}
+	template <typename _type> inline varx3<type>& operator /= (varx3<_type>& val)
+	{
+		x /= val.x; y /= val.y; z /= val.z;
+		return *this;
+	}
+	template <typename _type> inline varx3<type>& operator *= (_type& val)
+	{
+		x *= val; y *= val; z *= val;
+		return *this;
+	}
+	template <typename _type> inline varx3<type>& operator /= (_type& val)
+	{
+		x /= val; y /= val; z /= val;
+		return *this;
+	}
 };
 
-struct float32x2
+template <typename type>
+struct varx4
 {
-	float x, y;
+	type x, y, z, w;
 
-	inline float32x2() = default;
-	inline float32x2(float _x, float _y) : x(_x), y(_y) {}
+	inline varx4() = default;
+	inline varx4(type _x, type _y, type _z, type _w) : x(_x), y(_y), z(_z), w(_w) {}
+	inline void set(type _x, type _y, type _z, type _w) { x = _x; y = _y; z = _z; w = _w; }
 
-	inline void set(float _x, float _y) { x = _x; y = _y; }
+	template <typename _type> inline bool operator == (varx4<_type>& val)
+	{
+		return x == val.x && y == val.y && z == val.z && w == val.w;
+	}
 
-	inline float32x2 operator * (float mul)			{ return float32x2(x * mul, y * mul); }
-	inline float32x2 operator *= (float mul)		{ return float32x2(x *= mul, y *= mul); }
-	inline float32x2 operator / (float div)			{ return float32x2(x / div, y / div); }
-	inline float32x2 operator /= (float div)		{ return float32x2(x /= div, y /= div); }
-	inline float32x2 operator * (float32x2& mul)	{ return float32x2(x * mul.x, y * mul.y); }
-	inline float32x2 operator *= (float32x2& mul)	{ return float32x2(x *= mul.x, y *= mul.y); }
-	inline float32x2 operator + (float32x2& add)	{ return float32x2(x + add.x, y + add.y); }
-	inline float32x2 operator += (float32x2& add)	{ return float32x2(x += add.x, y += add.y); }
-	inline float32x2 operator - (float32x2& sub)	{ return float32x2(x - sub.x, y - sub.y); }
-	inline float32x2 operator -= (float32x2& sub)	{ return float32x2(x -= sub.x, y -= sub.y); }
+	template <typename _type> inline varx4<type> operator + (varx4<_type>& val)
+	{
+		return varx4<type>(x + val.x, y + val.y, z + val.z, w + val.w);
+	}
+	template <typename _type> inline varx4<type> operator - (varx4<_type>& val)
+	{
+		return varx4<type>(x - val.x, y - val.y, z - val.z, w - val.w);
+	}
+	template <typename _type> inline varx4<type> operator * (varx4<_type>& val)
+	{
+		return varx4<type>(x * val.x, y * val.y, z * val.z, w * val.w);
+	}
+	template <typename _type> inline varx4<type> operator / (varx4<_type>& val)
+	{
+		return varx4<type>(x / val.x, y / val.y, z / val.z, w / val.w);
+	}
+	template <typename _type> inline varx4<type> operator * (_type& val)
+	{
+		return varx4<type>(x * val, y * val, z * val, w * val);
+	}
+	template <typename _type> inline varx4<type> operator / (_type& val)
+	{
+		return varx4<type>(x / val, y / val, z / val, w / val);
+	}
+
+	template <typename _type> inline varx4<type>& operator += (varx4<_type>& val)
+	{
+		x += val.x; y += val.y; z += val.z; w += val.w;
+		return *this;
+	}
+	template <typename _type> inline varx4<type>& operator -= (varx4<_type>& val)
+	{
+		x -= val.x; y -= val.y; z -= val.z; w -= val.w;
+		return *this;
+	}
+	template <typename _type> inline varx4<type>& operator *= (varx4<_type>& val)
+	{
+		x *= val.x; y *= val.y; z *= val.z; w *= val.w;
+		return *this;
+	}
+	template <typename _type> inline varx4<type>& operator /= (varx4<_type>& val)
+	{
+		x /= val.x; y /= val.y; z /= val.z; w /= val.w;
+		return *this;
+	}
+	template <typename _type> inline varx4<type>& operator *= (_type& val)
+	{
+		x *= val; y *= val; z *= val; w *= val;
+		return *this;
+	}
+	template <typename _type> inline varx4<type>& operator /= (_type& val)
+	{
+		x /= val; y /= val; z /= val; w /= val;
+		return *this;
+	}
 };
 
-struct float32x3
+template <typename type>
+inline varx2<type> operator - (varx2<type>& val)
 {
-	float x, y, z;
-
-	inline float32x3() = default;
-	inline float32x3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
-
-	inline void set(float _x, float _y, float _z) { x = _x; y = _y; z = _z; }
-
-	inline float32x3 operator * (float mul)			{ return float32x3(x * mul, y * mul, z * mul); }
-	inline float32x3 operator *= (float mul)		{ return float32x3(x *= mul, y *= mul, z *= mul); }
-	inline float32x3 operator / (float div)			{ return float32x3(x / div, y / div, z / div); }
-	inline float32x3 operator /= (float div)		{ return float32x3(x /= div, y /= div, z /= div); }
-	inline float32x3 operator * (float32x3& mul)	{ return float32x3(x * mul.x, y * mul.y, z * mul.z); }
-	inline float32x3 operator *= (float32x3& mul)	{ return float32x3(x *= mul.x, y *= mul.y, z *= mul.z); }
-	inline float32x3 operator + (float32x3& add)	{ return float32x3(x + add.x, y + add.y, z + add.z); }
-	inline float32x3 operator += (float32x3& add)	{ return float32x3(x += add.x, y += add.y, z += add.z); }
-	inline float32x3 operator - (float32x3& sub)	{ return float32x3(x - sub.x, y - sub.y, z - sub.z); }
-	inline float32x3 operator -= (float32x3& sub)	{ return float32x3(x -= sub.x, y -= sub.y, z -= sub.z); }
-};
-
-struct float32x4
-{
-	float x, y, z, w;
-
-	inline float32x4() = default;
-	inline float32x4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
-
-	inline void set(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
-
-	inline float32x4 operator * (float mul)			{ return float32x4(x * mul, y * mul, z * mul, w * mul); }
-	inline float32x4 operator *= (float mul)		{ return float32x4(x *= mul, y *= mul, z *= mul, w *= mul); }
-	inline float32x4 operator / (float div)			{ return float32x4(x / div, y / div, z / div, w / div); }
-	inline float32x4 operator /= (float div)		{ return float32x4(x /= div, y /= div, z /= div, w /= div); }
-	inline float32x4 operator * (float32x4& mul)	{ return float32x4(x * mul.x, y * mul.y, z * mul.z, w * mul.w); }
-	inline float32x4 operator *= (float32x4& mul)	{ return float32x4(x *= mul.x, y *= mul.y, z *= mul.z, w *= mul.w); }
-	inline float32x4 operator + (float32x4& add)	{ return float32x4(x + add.x, y + add.y, z + add.z, w + add.w); }
-	inline float32x4 operator += (float32x4& add)	{ return float32x4(x += add.x, y += add.y, z += add.z, w += add.w); }
-	inline float32x4 operator - (float32x4& sub)	{ return float32x4(x - sub.x, y - sub.y, z - sub.z, w - sub.w); }
-	inline float32x4 operator -= (float32x4& sub)	{ return float32x4(x -= sub.x, y -= sub.y, z -= sub.z, w -= sub.w); }
-};
-
-inline float32x2 operator - (float32x2& arg)
-{
-	return float32x2(-arg.x, -arg.y);
+	return varx2<type>(-val.x, -val.y);
 }
-inline float32x3 operator - (float32x3& arg)
+template <typename type>
+inline varx3<type> operator - (varx3<type>& val)
 {
-	return float32x3(-arg.x, -arg.y, -arg.z);
+	return varx3<type>(-val.x, -val.y, -val.z);
 }
-inline float32x4 operator - (float32x4& arg)
+template <typename type>
+inline varx4<type> operator - (varx4<type>& val)
 {
-	return float32x4(-arg.x, -arg.y, -arg.z, -arg.w);
+	return varx4<type>(-val.x, -val.y, -val.z, -val.w);
 }
 
-struct rectf32
+template <typename type>
+struct rectvar
 {
-	float left, top, right, bottom;
+	type left, top, right, bottom;
 
-	inline rectf32() = default;
-	inline rectf32(float _left, float _top, float _right, float _bottom) : left(_left), top(_top), right(_right), bottom(_bottom) {}
+	inline rectvar() = default;
+	inline rectvar(type _left, type _top, type _right, type _bottom) : left(_left), top(_top), right(_right), bottom(_bottom) {}
 
-	inline void set(float _left, float _top, float _right, float _bottom) { left = _left; top = _top; right = _right; bottom = _bottom; }
+	inline void set(type _left, type _top, type _right, type _bottom) { left = _left; top = _top; right = _right; bottom = _bottom; }
 };
-struct rectu32
+
+using uint8x2 = varx2<uint8>;
+using uint8x3 = varx3<uint8>;
+using uint8x4 = varx4<uint8>;
+using uint16x2 = varx2<uint16>;
+using uint16x3 = varx3<uint16>;
+using uint16x4 = varx4<uint16>;
+using uint32x2 = varx2<uint32>;
+using uint32x3 = varx3<uint32>;
+using uint32x4 = varx4<uint32>;
+using uint64x2 = varx2<uint64>;
+using uint64x3 = varx3<uint64>;
+using uint64x4 = varx4<uint64>;
+
+using sint8x2 = varx2<sint8>;
+using sint8x3 = varx3<sint8>;
+using sint8x4 = varx4<sint8>;
+using sint16x2 = varx2<sint16>;
+using sint16x3 = varx3<sint16>;
+using sint16x4 = varx4<sint16>;
+using sint32x2 = varx2<sint32>;
+using sint32x3 = varx3<sint32>;
+using sint32x4 = varx4<sint32>;
+using sint64x2 = varx2<sint64>;
+using sint64x3 = varx3<sint64>;
+using sint64x4 = varx4<sint64>;
+
+using float32x2 = varx2<float32>;
+using float32x3 = varx3<float32>;
+using float32x4 = varx4<float32>;
+using float64x2 = varx2<float64>;
+using float64x3 = varx3<float64>;
+using float64x4 = varx4<float64>;
+
+using rectu8 = rectvar<uint8>;
+using rectu16 = rectvar<uint16>;
+using rectu32 = rectvar<uint32>;
+using rectu64 = rectvar<uint64>;
+using rects8 = rectvar<sint8>;
+using rects16 = rectvar<sint16>;
+using rects32 = rectvar<sint32>;
+using rects64 = rectvar<sint64>;
+using rectf32 = rectvar<float32>;
+using rectf64 = rectvar<float64>;
+
+template <typename type>
+inline type dot(varx2<type>& a, varx2<type>& b)
 {
-	uint32 left, top, right, bottom;
-
-	inline rectu32() = default;
-	inline rectu32(uint32 _left, uint32 _top, uint32 _right, uint32 _bottom) : left(_left), top(_top), right(_right), bottom(_bottom) {}
-
-	inline void set(uint32 _left, uint32 _top, uint32 _right, uint32 _bottom) { left = _left; top = _top; right = _right; bottom = _bottom; }
-};
-struct rects32
+	return a.x * b.x + a.y * b.y;
+}
+template <typename type>
+inline type dot(varx3<type>& a, varx3<type>& b)
 {
-	int32 left, top, right, bottom;
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+template <typename type>
+inline type dot(varx4<type>& v1, varx4<type>& v2)
+{
+	return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
 
-	inline rects32() = default;
-	inline rects32(int32 _left, int32 _top, int32 _right, int32 _bottom) : left(_left), top(_top), right(_right), bottom(_bottom) {}
-
-	inline void set(int32 _left, int32 _top, int32 _right, int32 _bottom) { left = _left; top = _top; right = _right; bottom = _bottom; }
-};
+template <typename type>
+inline varx3<type> cross(varx3<type>& a, varx3<type>& b)
+{
+	return varx3<type>(
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
+		a.x * b.y - a.y * b.x);
+}
+template <typename type>
+inline type cross(varx2<type>& a, varx2<type>& b)
+{
+	return a.x * b.y - a.y * b.x;
+}
 
 #endif
