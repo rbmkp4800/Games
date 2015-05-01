@@ -1,7 +1,7 @@
 #include <Windows.h>
-
-#include "types.h"
-#include "Render2D.h"
+#include <d2d1.h>
+#include <extypes.h>
+//#include "Render2D.h"
 
 wchar_t wndClass [] = L"some_app_class";
 wchar_t wndTitle [] = L"Application 1";
@@ -10,48 +10,28 @@ HINSTANCE hInstance;
 
 DWORD __stdcall RenderThreadMain(void* args)
 {
-	using namespace Render2D;
-
 	HWND hWnd = (HWND) args;
 	RECT wndRect;
 	GetClientRect(hWnd, &wndRect);
-	uint32x2 wndSize(wndRect.right - wndRect.left, wndRect.bottom - wndRect.top);
+	uint32 wndSizeX = wndRect.right - wndRect.left;
+	uint32 wndSizeY = wndRect.bottom - wndRect.top;
 
-	Render::Init();
-	SwapChain swapChain;
-	swapChain.Create(hWnd, wndSize);
-	Render::SetTarget(&swapChain);
-	TextFormat textFormat;
-	textFormat.Create();
-	//Render::SetTransform(matrix3x2::verticalReflection());
+	ID2D1Factory *d2dFactory = nullptr;
+	ID2D1HwndRenderTarget *d2dRT = nullptr;
+	ID2D1SolidColorBrush *d2dBrush = nullptr;
+	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2dFactory);
+	d2dFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(),
+		D2D1::HwndRenderTargetProperties(hWnd, D2D1::SizeU(wndSizeX, wndSizeY)), &d2dRT);
+	d2dRT->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Yellow), &d2dBrush);
 
-	float f = 0.0f;
 	for (;;)
 	{
-		GetClientRect(hWnd, &wndRect);
-		if (wndSize.x != wndRect.right - wndRect.left || wndSize.y != wndRect.bottom - wndRect.top)
-		{
-			wndSize.set(wndRect.right - wndRect.left, wndRect.bottom - wndRect.top);
-			swapChain.Resize(wndSize);
-		}
-
-		f += 0.02f;
-		Render::Clear(colors::cornflowerBlue);
-		Render::DrawLine(float32x2(50.0f, 50.0f), float32x2(sinf(f) * 200.0f, cosf(f) * 200.0f), colors::yellow, 50.0f);
-		//Render::DrawEllipse(&rectf32(-100.0f, -100.0f, 2000.0f, 2000.0f), 0xffff0000, 0.5f);
-		Render::DrawFillRect(&rectf32(10.0f, 10.0f, 100.0f, 100.0f), colors::red);
-		float32x2 v [] =
-		{
-			{ 210.0f, 220.0f },
-			{ 280.0f, 320.0f },
-			{ 290.0f, 200.0f },
-			{ 250.0f, 120.0f },
-		};
-		Render::DrawQuadrangle(v, colors::cyan);
-		char* str = "ןנטגוע ובףקטו רנטפעû כמכ!!!ְױְױְױְױְ ENG: Fuck #include<striod.gh>";
-		Render::DrawText(float32x2(10.0f, 10.0f), 32.0f, str, strlen(str), &textFormat);
-		Render::Flush();
-		swapChain.Present();
+		d2dRT->BeginDraw();
+		d2dRT->Clear(D2D1::ColorF(D2D1::ColorF::CornflowerBlue));
+		d2dRT->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(200.0f, 200.0f), 100.0f, 100.0f), d2dBrush, 10.0f);
+		d2dRT->FillRectangle(D2D1::RectF(10.0f, 10.0f, 20.0f, 20.0f), d2dBrush);
+		d2dRT->FillRectangle(D2D1::RectF(30.0f, 30.0f, 20.0f, 20.0f), d2dBrush);
+		d2dRT->EndDraw();
 	}
 
 	return 0;

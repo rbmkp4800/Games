@@ -1,142 +1,97 @@
 #include <extypes.h>
-#include <extypes.vectors.math.h>
+#include <extypes.vectors.h>
 #include <Render2D.h>
 
-#define MAGNETIC_FORCE_COEF			0.04f
-#define MAGNETIC_FORCE_MAX_DISTANCE 1.5f
-#define MAGNETIC_FORCE_UNIT_SIZE	0.2f
-
-#define BOUNCE_COEF_WALLS			0.8f
-#define BOUNCE_COEF_CHARGED_BALLS	0.6f
-#define ACCEL_PLAYERBALL_CONTROL	1.5f
-#define ACCEL_GRAVITY				0.5f
-#define ACCEL_FRICTION				0.25f
-
-#define GAMEFIELD_BLOCK_SIZE	0.01f
-
-#define BACKGROUND_BLOCK_SIZE	0.2f
-
-#define SIDEWALL_WIDTH	0.1f
-#define BACKWALL_WIDTH	0.85f
-#define FIELD_WIDTH		(BACKWALL_WIDTH + 2.0f * SIDEWALL_WIDTH)
-#define SIDEWALL_INNER_PERSPECCOEF	BACKWALL_WIDTH
-#define SIDEWALL_OUTER_PERSPECCOEF	FIELD_WIDTH
-
-#define GAMEFIELD_POSCOEF_OBJECT_DELETE		5.0f
-
-#define SHADOWS_BITMAP_WIDTH	480
-
-#define CAMERA_TARGET_OUTPUT_DISPLACEMENT_POSCOEF	0.7f
-#define CAMERA_EXPON_DIST_DERCEASE_DELTA	0.04f
-#define CAMERA_EXPON_DIST_DERCEASE_COEF		5.0f
-
-inline void* operator new(size_t size, void* ptr) { return ptr; }
-inline void operator delete(void*, void*) {}
-
-class GameObjectsController;
-
-class GameObject abstract
+namespace BallsGame
 {
-	friend GameObjectsController;
-
-public:
-	enum class Message : uint32
+	struct PlayerBall
 	{
-		None = 0,
-		UpdateForces = 1,
-		UpdateCollisions = 2,
-		DrawShadows = 3,
-		Draw = 4,
+		float32x2 position, speed, acceleration;
+		float radius, charge;
 	};
 
-protected:
-	float32x2 position;
-
-	virtual void Dispatch(Message message) = 0;
-
-public:
-	GameObject(float32x2 _position) : position(_position) {}
-	virtual ~GameObject() {}
-};
-
-class ChargedStaticBall : public GameObject
-{
-private:
-	float radius, charge, interactionStrength, interactionSpriteDisplacement;
-
-	inline void UpdateForces();
-	inline void UpdateCollisions();
-	inline void DrawShadows();
-	inline void Draw();
-
-	virtual void Dispatch(GameObject::Message message) override;
-
-public:
-	inline ChargedStaticBall(float32x2 _position, float _radius, float _charge)
-		: GameObject(_position), radius(_radius), charge(_charge), interactionStrength(0.0f), interactionSpriteDisplacement(0.0f) {}
-};
-
-class GameObjectsController
-{
-private:
-	static const uint16 objectsLimit = 128;
-	static const uint32 bufferSize = 4096;
-	static const uint32 objectsAlign = 4;
-
-	class GameObject *objectsBuffer[objectsLimit];
-	void *memBuffer;
-	uint16 firstObjectIdx, lastObjectIdx;
-	uint32 lastObjectSize;
-
-	inline void deleteFirstObject();
-	void* allocate(uint32 _objectSize);
-
-public:
-	GameObjectsController();
-	~GameObjectsController();
-
-	void Dispatch(GameObject::Message message);
-	void Clear();
-	template<typename ObjectType, typename ... ObjectCreationArgTypes>
-	inline void CreateObject(ObjectCreationArgTypes const ... creationArgs)
+	class GameObject abstract
 	{
-		ObjectType* ptr = (ObjectType*) allocate(sizeof(ObjectType));
-		new(ptr) ObjectType(creationArgs ...);
-	}
-};
+	protected:
+		float32x2 position;
 
-class Textures abstract
-{
-public:
-	static Render2D::Texture ballMask, interactionPushSprite,
-		interactionPullSprite, backgroundMask;
-	static bool Load();
-};
+	public:
+		inline float32x2 GetPosition() { return position; }
+		inline void Move(float posDelta) { position.y += posDelta; }
+	};
 
-struct PlayerBall
-{
-	float32x2 position, translation, speed, acceleration;
-	float radius, charge;
-	inline void UpdateTranslation(float delta)
+	class StaticBall : public GameObject
 	{
-		translation = (speed + acceleration * delta / 2.0f) * delta;
-		speed += acceleration * delta;
-		acceleration.set(0.0f, 0.0f);
-	}
-	inline void CheckWallsCollisions()
+	private:
+		float radius, charge;
+
+	public:
+		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& playerBallTranslation);
+		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall);
+
+		void DrawBackground();
+		void DrawForeground();
+	};
+
+	class Field
 	{
-		if (position.x < radius)
+	private:
+		static const uint32 staticBallsLimit = 64;
+
+		StaticBall staticBalls[staticBallsLimit];
+		uint32 staticBallsCount;
+
+	public:
+		void Clear();
+		void InteractPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2 playerBallTranslation);
+		void UpdateAndDraw(float posDelta, Render2D::Device* device);
+	};
+
+	class Background
+	{
+	private:
+		static const uint32 blursLimit = 32;
+
+		Render2D::VertexEllipse blursVertexBuffer[blursLimit * 8];
+		struct blurDesc
 		{
-			speed.x = -speed.x * BOUNCE_COEF_WALLS;
-			position.x = 2.0f * radius - position.x;
-		}
-		if (position.x > 1.0f - radius)
-		{
-			speed.x = -speed.x * BOUNCE_COEF_WALLS;
-			position.x = 2.0f * (1.0f - radius) - position.x;
-		}
-	}
-};
+			float posDeltaCoef;
+		} blurDescs[blursLimit];
+		uint32 blursCount;
+		rectf32 rect;
 
-extern float timeDelta;
-extern PlayerBall playerBall;
+	public:
+		inline Background() : blursCount(0), rect(0.0f, 0.0f, 0.0f, 0.0f) {}
+		void Generate();
+		void UpdateAndDraw(float posDelta, Render2D::Device* device);
+	};
+
+	enum class PlayerControl
+	{
+		None = 0,
+		Left = 1,
+		Right = 2,
+		Up = 3,
+		Down = 4,
+	};
+
+	class Game
+	{
+	private:
+		static Render2D::Device device;
+
+		Render2D::SwapChain swapChain;
+
+		PlayerBall playerBall;
+		Field field;
+		Background background;
+
+	public:
+		bool Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY);
+		void Update(float timeDelta);
+
+		void SetPlayerControlState(PlayerControl playerControl, bool state);
+		void ResizeOutput(uint32 x, uint32 y);
+		void Restart();
+	};
+}

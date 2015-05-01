@@ -1,12 +1,10 @@
 #include <Windows.h>
 
-#include "BallsGame.Interface.h"
-
-using namespace BallsGame;
+#include "BallsGame.h"
 
 inline void SetGameControlsStateByKeyCode(uint32 keycode, bool state)
 {
-	switch (keycode)
+	/*switch (keycode)
 	{
 	case 'Q':
 		Game::SetControlState(Control::PositiveCharge, state);
@@ -35,7 +33,7 @@ inline void SetGameControlsStateByKeyCode(uint32 keycode, bool state)
 	case 'R':
 		Game::Restart();
 		break;
-	}
+	}*/
 }
 
 LRESULT __stdcall WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -68,7 +66,10 @@ DWORD __stdcall GameThreadMain(void* args)
 	RECT clientRect = { 0 };
 	GetClientRect(hWnd, &clientRect);
 
-	Game::Run(hWnd, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+	BallsGame::Game game;
+	game.Create(hWnd, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+	for (;;)
+		game.Update(0.0f);
 
 	return 0;
 }

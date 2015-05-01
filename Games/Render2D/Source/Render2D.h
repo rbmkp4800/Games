@@ -11,6 +11,7 @@ struct ID3D11VertexShader;
 struct ID3D11PixelShader;
 struct ID3D11Buffer;
 struct ID3D11RasterizerState;
+struct ID3D11SamplerState;
 struct ID3D11BlendState;
 
 struct ID3D11RenderTargetView;
@@ -22,6 +23,8 @@ struct matrix3x2;
 
 namespace Render2D
 {
+	static const uint32 deviceVertexBufferSize = 0x4000;
+
 	enum class Direction : uint8
 	{
 		None = 0,
@@ -38,31 +41,31 @@ namespace Render2D
 	};
 	struct colors
 	{
-		const static uint32
-			transparent = 0x00000000,
-			black = 0xff000000,
-			white = 0xffffffff,
-			red = 0xff0000ff,
-			green = 0xff00ff00,
-			blue = 0xffff0000,
-			yellow = 0xff00ffff,
-			magenta = 0xffff00ff,
-			cyan = 0xffffff00,
-			darkRed = 0xff00007f,
-			darkGreen = 0xff007f00,
-			darkBlue = 0xff7f0000,
-			darkYellow = 0xff007f7f,
-			darkMagenta = 0xff7f007f,
-			darkCyan = 0xff7f7f00,
-			gray = 0xff7f7f7f,
+		static const uint32
+			transparent	= 0x00000000,
+			black		= 0xff000000,
+			white		= 0xffffffff,
+			red			= 0xff0000ff,
+			green		= 0xff00ff00,
+			blue		= 0xffff0000,
+			yellow		= 0xff00ffff,
+			magenta		= 0xffff00ff,
+			cyan		= 0xffffff00,
+			darkRed		= 0xff00007f,
+			darkGreen	= 0xff007f00,
+			darkBlue	= 0xff7f0000,
+			darkYellow	= 0xff007f7f,
+			darkMagenta	= 0xff7f007f,
+			darkCyan	= 0xff7f7f00,
+			gray		= 0xff7f7f7f,
 			cornflowerBlue = 0xffed9564,
-			lightRed = 0xff7f7fff,
-			lightGreen = 0xff7fff7f,
-			lightBlue = 0xffe6d8ad,
-			lightSalmon = 0xff7aa0ff,
-			skyBlue = 0xffebce87,
-			lightGray = 0xffc0c0c0,
-			darkGray = 0xff3f3f3f;
+			lightRed	= 0xff7f7fff,
+			lightGreen	= 0xff7fff7f,
+			lightBlue	= 0xffe6d8ad,
+			lightSalmon	= 0xff7aa0ff,
+			skyBlue		= 0xffebce87,
+			lightGray	= 0xffc0c0c0,
+			darkGray	= 0xff3f3f3f;
 	};
 
 	struct coloru32
@@ -192,12 +195,26 @@ namespace Render2D
 		float32x2 tex;
 		float alpha;
 	};
-	struct VertexEllipse	//24 bytes, 9 floats
+	struct VertexEllipse	//32 bytes, 14 floats
 	{
 		float32x2 pos;
 		float32x2 tex;
-		float innerRadius;
-		coloru32 color;
+		float outerRadius, innerRadius;
+		coloru32 outerColor, innerColor;
+	};
+
+	enum class IndexationMode : uint8
+	{
+		None = 0,
+		Quad = 1,
+		Fan = 2,
+	};
+	enum class Effect : uint8
+	{
+		None = 0,
+		Color = 1,
+		Tex = 2,
+		Ellipse = 3,
 	};
 
 	class Device : public INoncopyable
@@ -212,21 +229,27 @@ namespace Render2D
 		ID3D11VertexShader *d3dColorVS, *d3dTexVS, *d3dEllipseVS;
 		ID3D11PixelShader *d3dColorPS, *d3dTexPS, *d3dEllipsePS;
 
-		ID3D11Buffer *d3dVertexBuffer, *d3dQuadIndexBuffer, *d3dTransformVSCB;
+		ID3D11Buffer *d3dVertexBuffer;
+		ID3D11Buffer *d3dQuadIndexBuffer, *d3dFanIndexBuffer;
+		ID3D11Buffer *d3dTransformVSCB;
 
 		ID3D11RasterizerState *d3dDefaultRS;
 		ID3D11SamplerState *d3dDefaultSS;
 		ID3D11BlendState *d3dAlphaBS;
 
-		inline void setStates(ID3D11InputLayout* d3dIL, ID3D11VertexShader* d3dVS, ID3D11PixelShader* d3dPS);
-		inline void draw(void* vertices, uint32 vertexCount, uint32 vertexSize);
+		inline void drawNonIndexed(void* vertices, uint32 vertexCount, uint32 vertexSize);
 		inline void drawIndexedQuads(void* vertices, uint32 vertexCount, uint32 vertexSize);
+		inline void drawIndexedFan(void* vertices, uint32 vertexCount, uint32 vertexSize);
+		inline void draw(void* vertices, uint32 vertexCount, uint32 vertexSize, IndexationMode indexationMode,
+			ID3D11InputLayout* d3dIL, ID3D11VertexShader* d3dVS, ID3D11PixelShader* d3dPS);
 
-		static const uint32 vertexBufferSize = 0x4000;
-		static const uint32 vertexColorLimit = vertexBufferSize / sizeof(VertexColor);
-		static const uint32 vertexTexLimit = vertexBufferSize / sizeof(VertexTex);
-		static const uint32 vertexEllipseLimit = vertexBufferSize / sizeof(VertexEllipse);
-		static const uint32 indexedQuadsLimit = vertexColorLimit / 6;
+		static const uint32 vertexBufferSize = deviceVertexBufferSize;
+		static const uint32 colorVertexLimit = vertexBufferSize / sizeof(VertexColor);
+		static const uint32 texVertexLimit = vertexBufferSize / sizeof(VertexTex);
+		static const uint32 ellipseVertexLimit = vertexBufferSize / sizeof(VertexEllipse);
+		static const uint32 globalVertexLimit = maxval_constexpr(colorVertexLimit, maxval_constexpr(texVertexLimit, ellipseVertexLimit));
+		static const uint32 quadIndexBufferSize = globalVertexLimit / 2;
+		static const uint32 fanIndexBufferSize = 128;
 
 	public:
 		Device();
@@ -242,95 +265,84 @@ namespace Render2D
 		void Clear(coloru32 color);
 		void UpdateTexture(ITexture* texture, rectu32* rect, void* data);
 
-		void DrawColored(VertexColor* vertices, uint32 vertexCount, bool indexedQuads);
-		void DrawTextured(VertexTex* vertices, uint32 vertexCount, bool indexedQuads);
-		void DrawEllipses(VertexEllipse* vertices, uint32 vertexCount, bool indexedQuads);
+		void DrawColored(VertexColor* vertices, uint32 vertexCount, IndexationMode indexationMode);
+		void DrawTextured(VertexTex* vertices, uint32 vertexCount, IndexationMode indexationMode);
+		void DrawEllipses(VertexEllipse* vertices, uint32 vertexCount, IndexationMode indexationMode);
 
 		static inline IDXGIFactory3* GetDXGIFactory() { return dxgiFactory; }
 		inline ID3D11Device* GetD3DDevice() { return d3dDevice; }
 		inline ID3D11DeviceContext* GetD3DDeviceContext() { return d3dContext; }
+		inline bool IsInitialized() { return d3dDevice ? true : false; }
 	};
 
-	//-----------------------------------Batches-------------------------------------//
+	/*//-----------------------------------Batches-------------------------------------//
 
-	class UniversalBatch
+	template <uint32 _vertexBufferSize>
+	class UniversalSerialBatch
 	{
 	private:
+		Device *device;
+		void* vertexBuffer;
+		uint32 vertexBufferSize, vertexCount;
+		Effect lastEffect;
+		IndexationMode lastIndexationMode;
+		bool managedVertexBuffer;
 
 	public:
-
-	};
-
-	/*class FastLinearAllocator
-	{
-	private:
-		void *buffer;
-		uintptr bufferSize, usedSize;
-
-	public:
-		FastLinearAllocator(uintptr initialSize);
-		~FastLinearAllocator();
-
-		void *Allocate(uintptr size);
-		void Reset();
-	};
-
-	class Batch
-	{
-	private:
-
-	public:
-
-	};
-
-	template<uint layersNumber, uint bufferAllocDepth, uint firstLayerBufferSize = 32>
-	class LayeredBatch
-	{
-	private:
-		struct
+		inline void UniversalSerialStaticBatch(Device *_device) : device(_device), vertexCount(0),
+			lastEffect(Effect::None), lastIndexationMode(IndexationMode::None)
 		{
-			struct
-			{
-				VertexColor *buffers[bufferAllocDepth];
-				uint32 allocBuffersCount;
-				uint32 lastBufferSize, lastBufferUsedSize;
-			} color;
-			struct
-			{
-				VertexTex *buffers[bufferAllocDepth];
-				uint32 allocBuffersCount;
-				uint32 lastBufferSize, lastBufferUsedSize;
-				TexturePack *texturePack;
-			} tex;
-			struct
-			{
-				VertexEllipse *buffers[bufferAllocDepth];
-				uint32 allocBuffersCount;
-				uint32 lastBufferSize, lastBufferUsedSize;
-			} ellipse;
-		} layers[layersNumber];
-		
-		FastLinearAllocator allocator;
 
-	public:
-		LayeredBatch(uint32 globalBufferInitialSize = 0x1000) : allocator(globalBufferInitialSize)
-		{
-			for (uint32 layerIdx = 0; layerIdx < layersNumber; layerIdx++)
-			{
-				layers[layerIdx].color.allocBuffersCount = 0;
-				layers[layerIdx].color.lastBufferSize = 0;
-				layers[layerIdx].tex.allocBuffersCount = 0;
-				layers[layerIdx].tex.lastBufferSize = 0;
-				layers[layerIdx].tex.texturePack = nullptr;
-				layers[layerIdx].ellipse.allocBuffersCount = 0;
-				layers[layerIdx].ellipse.lastBufferSize = 0;
-			}
 		}
-		~LayeredBatch() {}
-		void PushTexture(uint32 layer, const rectf32& destRect, const rectf32& srcRect, uint32 textureId);
-		void PushRect(uint32 layer, const rectf32& destRect, coloru32 color);
-		void PushEllipse(uint32 layer, const rectf32& destRect, coloru32 color, float innerRadius = -1.0f);
-		void Clear();
-		void BindLayerToTexturePack(uint32 layer, TexturePack* texturePack);
+		inline void ~UniversalSerialStaticBatch()
+		{
+			Flush();
+		}
+		inline void PushRectangle(const rectf32& rectangle, coloru32 color)
+		{
+
+		}
+		void PushEllipse()
+		{
+
+		}
+		void Flush(Device* device)
+		{
+
+		}
+	};
+
+	template <uint32 _colorVertexLimit, uint32 _texVertexLimit, uint32 _ellipseVertexLimit>
+	class UniversalParallelStaticBatch
+	{
+	private:
+		static const uint32 colorVertexLimit = minval_constexpr(_colorVertexLimit, vertexBufferSize / sizeof(VertexColor));
+		static const uint32 texVertexLimit = minval_constexpr(_texVertexLimit, vertexBufferSize / sizeof(VertexTex));
+		static const uint32 ellipseVertexLimit = minval_constexpr(_ellipseVertexLimit, vertexBufferSize / sizeof(VertexEllipse));
+
+		VertexColor colorVertexBuffer[colorVertexLimit];
+		VertexTex texVertexBuffer[texVertexLimit];
+		VertexEllipse ellipseVertexBuffer[ellipseVertexLimit];
+		uint32 colorVertexCount, texVertexCount, ellipseVertexCount;
+		Device *device;
+
+		inline void flushColor()
+		{
+			device->DrawColored(colorVertexBuffer, colorVertexCount, )
+		}
+
+	public:
+		UniversalParallelStaticBatch(Device *_device = nullptr) : colorVertexCount(0), texVertexCount(0), ellipseVertexCount(0), device(_device) {}
+		~UniversalParallelStaticBatch()
+		{
+			Flush();
+		}
+
+		inline void SetDevice(Device *_device) { device = _device; }
+
+		void Flush()
+		{
+
+		}
 	};*/
 }

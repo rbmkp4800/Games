@@ -1,14 +1,17 @@
 struct PSInput
 {
 	float4 pos : SV_Position;
-	float3 tex : TEXCOORD;
-	float4 color : COLOR;
+	float2 tex : TEXCOORD0;
+	float2 radius : TEXCOORD1;	// x - outer, y - inner
+	float4 outerColor : COLOR0;
+	float4 innerColor : COLOR1;
 };
 
 float4 main(PSInput input) : SV_TARGET
 {
-	float radius = length(input.tex.xy);
-	clip(1.0f - radius);
-	clip(radius - input.tex.z);
-	return input.color;
+	float distance = length(input.tex.xy);
+	clip(input.radius.x - distance);
+	clip(distance - input.radius.y <= 0.0f ? -1.0f : 1.0f);
+	return lerp(input.innerColor, input.outerColor,
+		(distance - input.radius.y) / (input.radius.x - input.radius.y));
 }

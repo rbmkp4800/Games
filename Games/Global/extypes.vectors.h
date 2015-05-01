@@ -17,62 +17,62 @@ struct varx2
 	inline float aspect() { return (float) x / (float) y; }
 	inline type multiply() { return x * y; }
 
-	template <typename _type> inline bool operator == (varx2<_type>& val)
+	template <typename _type> inline bool operator == (const varx2<_type>& val) const
 	{
 		return x == val.x && y == val.y;
 	}
 
-	template <typename _type> inline varx2<type> operator + (varx2<_type>& val)
+	template <typename _type> inline varx2<type> operator + (const varx2<_type>& val) const
 	{
 		return varx2<type>(x + val.x, y + val.y);
 	}
-	template <typename _type> inline varx2<type> operator - (varx2<_type>& val)
+	template <typename _type> inline varx2<type> operator - (const varx2<_type>& val) const
 	{
 		return varx2<type>(x - val.x, y - val.y);
 	}
-	template <typename _type> inline varx2<type> operator * (varx2<_type>& val)
+	template <typename _type> inline varx2<type> operator * (const varx2<_type>& val) const
 	{
 		return varx2<type>(x * val.x, y * val.y);
 	}
-	template <typename _type> inline varx2<type> operator / (varx2<_type>& val)
+	template <typename _type> inline varx2<type> operator / (const varx2<_type>& val) const
 	{
 		return varx2<type>(x / val.x, y / val.y);
 	}
-	template <typename _type> inline varx2<type> operator * (_type& val)
+	template <typename _type> inline varx2<type> operator * (const _type& val) const
 	{
 		return varx2<type>(x * val, y * val);
 	}
-	template <typename _type> inline varx2<type> operator / (_type& val)
+	template <typename _type> inline varx2<type> operator / (const _type& val) const
 	{
 		return varx2<type>(x / val, y / val);
 	}
 
-	template <typename _type> inline varx2<type>& operator += (varx2<_type>& val)
+	template <typename _type> inline varx2<type>& operator += (const varx2<_type>& val)
 	{
 		x += val.x; y += val.y;
 		return *this;
 	}
-	template <typename _type> inline varx2<type>& operator -= (varx2<_type>& val)
+	template <typename _type> inline varx2<type>& operator -= (const varx2<_type>& val)
 	{
 		x -= val.x; y -= val.y;
 		return *this;
 	}
-	template <typename _type> inline varx2<type>& operator *= (varx2<_type>& val)
+	template <typename _type> inline varx2<type>& operator *= (const varx2<_type>& val)
 	{
 		x *= val.x; y *= val.y;
 		return *this;
 	}
-	template <typename _type> inline varx2<type>& operator /= (varx2<_type>& val)
+	template <typename _type> inline varx2<type>& operator /= (const varx2<_type>& val)
 	{
 		x /= val.x; y /= val.y;
 		return *this;
 	}
-	template <typename _type> inline varx2<type>& operator *= (_type& val)
+	template <typename _type> inline varx2<type>& operator *= (const _type& val)
 	{
 		x *= val; y *= val;
 		return *this;
 	}
-	template <typename _type> inline varx2<type>& operator /= (_type& val)
+	template <typename _type> inline varx2<type>& operator /= (const _type& val)
 	{
 		x /= val; y /= val;
 		return *this;
@@ -88,62 +88,62 @@ struct varx3
 	inline varx3(type _x, type _y, type _z) : x(_x), y(_y), z(_z) {}
 	inline void set(type _x, type _y, type _z) { x = _x; y = _y; z = _z; }
 
-	template <typename _type> inline bool operator == (varx3<_type>& val)
+	template <typename _type> inline bool operator == (const varx3<_type>& val) const
 	{
 		return x == val.x && y == val.y && z == val.z;
 	}
 
-	template <typename _type> inline varx3<type> operator + (varx3<_type>& val)
+	template <typename _type> inline varx3<type> operator + (const varx3<_type>& val) const
 	{
 		return varx3<type>(x + val.x, y + val.y, z + val.z);
 	}
-	template <typename _type> inline varx3<type> operator - (varx3<_type>& val)
+	template <typename _type> inline varx3<type> operator - (const varx3<_type>& val) const
 	{
 		return varx3<type>(x - val.x, y - val.y, z - val.z);
 	}
-	template <typename _type> inline varx3<type> operator * (varx3<_type>& val)
+	template <typename _type> inline varx3<type> operator * (const varx3<_type>& val) const
 	{
 		return varx3<type>(x * val.x, y * val.y, z * val.z);
 	}
-	template <typename _type> inline varx3<type> operator / (varx3<_type>& val)
+	template <typename _type> inline varx3<type> operator / (const varx3<_type>& val) const
 	{
 		return varx3<type>(x / val.x, y / val.y, z / val.z);
 	}
-	template <typename _type> inline varx3<type> operator * (_type& val)
+	template <typename _type> inline varx3<type> operator * (const _type& val) const
 	{
 		return varx3<type>(x * val, y * val, z * val);
 	}
-	template <typename _type> inline varx3<type> operator / (_type& val)
+	template <typename _type> inline varx3<type> operator / (const _type& val) const
 	{
 		return varx3<type>(x / val, y / val, z / val);
 	}
 
-	template <typename _type> inline varx3<type>& operator += (varx3<_type>& val)
+	template <typename _type> inline varx3<type>& operator += (const varx3<_type>& val)
 	{
 		x += val.x; y += val.y; z += val.z;
 		return *this;
 	}
-	template <typename _type> inline varx3<type>& operator -= (varx3<_type>& val)
+	template <typename _type> inline varx3<type>& operator -= (const varx3<_type>& val)
 	{
 		x -= val.x; y -= val.y; z -= val.z;
 		return *this;
 	}
-	template <typename _type> inline varx3<type>& operator *= (varx3<_type>& val)
+	template <typename _type> inline varx3<type>& operator *= (const varx3<_type>& val)
 	{
 		x *= val.x; y *= val.y; z *= val.z;
 		return *this;
 	}
-	template <typename _type> inline varx3<type>& operator /= (varx3<_type>& val)
+	template <typename _type> inline varx3<type>& operator /= (const varx3<_type>& val)
 	{
 		x /= val.x; y /= val.y; z /= val.z;
 		return *this;
 	}
-	template <typename _type> inline varx3<type>& operator *= (_type& val)
+	template <typename _type> inline varx3<type>& operator *= (const _type& val)
 	{
 		x *= val; y *= val; z *= val;
 		return *this;
 	}
-	template <typename _type> inline varx3<type>& operator /= (_type& val)
+	template <typename _type> inline varx3<type>& operator /= (const _type& val)
 	{
 		x /= val; y /= val; z /= val;
 		return *this;
@@ -159,62 +159,62 @@ struct varx4
 	inline varx4(type _x, type _y, type _z, type _w) : x(_x), y(_y), z(_z), w(_w) {}
 	inline void set(type _x, type _y, type _z, type _w) { x = _x; y = _y; z = _z; w = _w; }
 
-	template <typename _type> inline bool operator == (varx4<_type>& val)
+	template <typename _type> inline bool operator == (const varx4<_type>& val) const
 	{
 		return x == val.x && y == val.y && z == val.z && w == val.w;
 	}
 
-	template <typename _type> inline varx4<type> operator + (varx4<_type>& val)
+	template <typename _type> inline varx4<type> operator + (const varx4<_type>& val) const
 	{
 		return varx4<type>(x + val.x, y + val.y, z + val.z, w + val.w);
 	}
-	template <typename _type> inline varx4<type> operator - (varx4<_type>& val)
+	template <typename _type> inline varx4<type> operator - (const varx4<_type>& val) const
 	{
 		return varx4<type>(x - val.x, y - val.y, z - val.z, w - val.w);
 	}
-	template <typename _type> inline varx4<type> operator * (varx4<_type>& val)
+	template <typename _type> inline varx4<type> operator * (const varx4<_type>& val) const
 	{
 		return varx4<type>(x * val.x, y * val.y, z * val.z, w * val.w);
 	}
-	template <typename _type> inline varx4<type> operator / (varx4<_type>& val)
+	template <typename _type> inline varx4<type> operator / (const varx4<_type>& val) const
 	{
 		return varx4<type>(x / val.x, y / val.y, z / val.z, w / val.w);
 	}
-	template <typename _type> inline varx4<type> operator * (_type& val)
+	template <typename _type> inline varx4<type> operator * (const _type& val) const
 	{
 		return varx4<type>(x * val, y * val, z * val, w * val);
 	}
-	template <typename _type> inline varx4<type> operator / (_type& val)
+	template <typename _type> inline varx4<type> operator / (const _type& val) const
 	{
 		return varx4<type>(x / val, y / val, z / val, w / val);
 	}
 
-	template <typename _type> inline varx4<type>& operator += (varx4<_type>& val)
+	template <typename _type> inline varx4<type>& operator += (const varx4<_type>& val)
 	{
 		x += val.x; y += val.y; z += val.z; w += val.w;
 		return *this;
 	}
-	template <typename _type> inline varx4<type>& operator -= (varx4<_type>& val)
+	template <typename _type> inline varx4<type>& operator -= (const varx4<_type>& val)
 	{
 		x -= val.x; y -= val.y; z -= val.z; w -= val.w;
 		return *this;
 	}
-	template <typename _type> inline varx4<type>& operator *= (varx4<_type>& val)
+	template <typename _type> inline varx4<type>& operator *= (const varx4<_type>& val)
 	{
 		x *= val.x; y *= val.y; z *= val.z; w *= val.w;
 		return *this;
 	}
-	template <typename _type> inline varx4<type>& operator /= (varx4<_type>& val)
+	template <typename _type> inline varx4<type>& operator /= (const varx4<_type>& val)
 	{
 		x /= val.x; y /= val.y; z /= val.z; w /= val.w;
 		return *this;
 	}
-	template <typename _type> inline varx4<type>& operator *= (_type& val)
+	template <typename _type> inline varx4<type>& operator *= (const _type& val)
 	{
 		x *= val; y *= val; z *= val; w *= val;
 		return *this;
 	}
-	template <typename _type> inline varx4<type>& operator /= (_type& val)
+	template <typename _type> inline varx4<type>& operator /= (const _type& val)
 	{
 		x /= val; y /= val; z /= val; w /= val;
 		return *this;
@@ -222,17 +222,17 @@ struct varx4
 };
 
 template <typename type>
-inline varx2<type> operator - (varx2<type>& val)
+inline varx2<type> operator - (const varx2<type>& val)
 {
 	return varx2<type>(-val.x, -val.y);
 }
 template <typename type>
-inline varx3<type> operator - (varx3<type>& val)
+inline varx3<type> operator - (const varx3<type>& val)
 {
 	return varx3<type>(-val.x, -val.y, -val.z);
 }
 template <typename type>
-inline varx4<type> operator - (varx4<type>& val)
+inline varx4<type> operator - (const varx4<type>& val)
 {
 	return varx4<type>(-val.x, -val.y, -val.z, -val.w);
 }
@@ -293,23 +293,23 @@ using rectf32 = rectvar<float32>;
 using rectf64 = rectvar<float64>;
 
 template <typename type>
-inline type dot(varx2<type>& a, varx2<type>& b)
+inline type dot(const varx2<type>& a, const varx2<type>& b)
 {
 	return a.x * b.x + a.y * b.y;
 }
 template <typename type>
-inline type dot(varx3<type>& a, varx3<type>& b)
+inline type dot(const varx3<type>& a, const varx3<type>& b)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 template <typename type>
-inline type dot(varx4<type>& v1, varx4<type>& v2)
+inline type dot(const varx4<type>& v1, const varx4<type>& v2)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
 template <typename type>
-inline varx3<type> cross(varx3<type>& a, varx3<type>& b)
+inline varx3<type> cross(const varx3<type>& a, const varx3<type>& b)
 {
 	return varx3<type>(
 		a.y * b.z - a.z * b.y,
@@ -317,7 +317,7 @@ inline varx3<type> cross(varx3<type>& a, varx3<type>& b)
 		a.x * b.y - a.y * b.x);
 }
 template <typename type>
-inline type cross(varx2<type>& a, varx2<type>& b)
+inline type cross(const varx2<type>& a, const varx2<type>& b)
 {
 	return a.x * b.y - a.y * b.x;
 }
