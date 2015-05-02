@@ -1,7 +1,6 @@
 #include <Windows.h>
-#include <d2d1.h>
-#include <extypes.h>
-//#include "Render2D.h"
+#include <Render2D.h>
+#include <extypes.matrix3x2.h>
 
 wchar_t wndClass [] = L"some_app_class";
 wchar_t wndTitle [] = L"Application 1";
@@ -10,28 +9,36 @@ HINSTANCE hInstance;
 
 DWORD __stdcall RenderThreadMain(void* args)
 {
+	using namespace Render2D;
+
 	HWND hWnd = (HWND) args;
 	RECT wndRect;
 	GetClientRect(hWnd, &wndRect);
 	uint32 wndSizeX = wndRect.right - wndRect.left;
 	uint32 wndSizeY = wndRect.bottom - wndRect.top;
 
-	ID2D1Factory *d2dFactory = nullptr;
-	ID2D1HwndRenderTarget *d2dRT = nullptr;
-	ID2D1SolidColorBrush *d2dBrush = nullptr;
-	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2dFactory);
-	d2dFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(),
-		D2D1::HwndRenderTargetProperties(hWnd, D2D1::SizeU(wndSizeX, wndSizeY)), &d2dRT);
-	d2dRT->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Yellow), &d2dBrush);
+	Device device;
+	device.Create();
+
+	SwapChain swapChain;
+	swapChain.CreateForHWnd(&device, hWnd, wndSizeX, wndSizeY);
+	device.SetTarget(&swapChain);
+
+	float rotation = 0.0f;
 
 	for (;;)
 	{
-		d2dRT->BeginDraw();
-		d2dRT->Clear(D2D1::ColorF(D2D1::ColorF::CornflowerBlue));
-		d2dRT->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(200.0f, 200.0f), 100.0f, 100.0f), d2dBrush, 10.0f);
-		d2dRT->FillRectangle(D2D1::RectF(10.0f, 10.0f, 20.0f, 20.0f), d2dBrush);
-		d2dRT->FillRectangle(D2D1::RectF(30.0f, 30.0f, 20.0f, 20.0f), d2dBrush);
-		d2dRT->EndDraw();
+		LocalMemoryBuffer<1024> buffer;
+		Batch batch(&device, buffer.GetPointer(), buffer.GetSize());
+
+		device.Clear(colors::cornflowerBlue);
+		device.SetTransform(matrix3x2::scale(600.0f / 800.0f, 1.0f) * matrix3x2::rotation(rotation += 0.01f));
+		batch.PushRectangle(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), colors::black);
+		batch.PushGradientEllipse(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), colors::red, coloru32(colors::white, 0.5f), 0.25f, 0.75f);
+		batch.PushGradientEllipse(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), colors::white, colors::yellow, 0.75f, 1.0f);
+		batch.PushRectangle(rectf32(-0.1f, -0.1f, 0.1f, 0.1f), colors::blue);
+		batch.Flush();
+		swapChain.Present();
 	}
 
 	return 0;

@@ -17,7 +17,7 @@ void Field::InteractPlayerBall(float timeDelta, PlayerBall& playerBall, float32x
 		playerBall.acceleration += staticBalls[i].GetForceAppliedToPlayerBall(playerBall);
 }
 
-void Field::UpdateAndDraw(float posDelta, Render2D::Device* device)
+void Field::UpdateAndDraw(float posDelta, Render2D::Batch* batch)
 {
 	for (uint32 i = 0; i < staticBallsCount; i++)
 		staticBalls[i].Move(posDelta);

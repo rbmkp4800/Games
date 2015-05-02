@@ -39,34 +39,6 @@ namespace Render2D
 		Horizontal = 1,
 		Vertical = 2,
 	};
-	struct colors
-	{
-		static const uint32
-			transparent	= 0x00000000,
-			black		= 0xff000000,
-			white		= 0xffffffff,
-			red			= 0xff0000ff,
-			green		= 0xff00ff00,
-			blue		= 0xffff0000,
-			yellow		= 0xff00ffff,
-			magenta		= 0xffff00ff,
-			cyan		= 0xffffff00,
-			darkRed		= 0xff00007f,
-			darkGreen	= 0xff007f00,
-			darkBlue	= 0xff7f0000,
-			darkYellow	= 0xff007f7f,
-			darkMagenta	= 0xff7f007f,
-			darkCyan	= 0xff7f7f00,
-			gray		= 0xff7f7f7f,
-			cornflowerBlue = 0xffed9564,
-			lightRed	= 0xff7f7fff,
-			lightGreen	= 0xff7fff7f,
-			lightBlue	= 0xffe6d8ad,
-			lightSalmon	= 0xff7aa0ff,
-			skyBlue		= 0xffebce87,
-			lightGray	= 0xffc0c0c0,
-			darkGray	= 0xff3f3f3f;
-	};
 
 	struct coloru32
 	{
@@ -93,6 +65,35 @@ namespace Render2D
 			result[2] = b / 255.0f;
 			result[3] = a / 255.0f;
 		}
+	};
+
+	struct colors
+	{
+		static const uint32
+			transparent = 0x00000000,
+			black = 0xff000000,
+			white = 0xffffffff,
+			red = 0xff0000ff,
+			green = 0xff00ff00,
+			blue = 0xffff0000,
+			yellow = 0xff00ffff,
+			magenta = 0xffff00ff,
+			cyan = 0xffffff00,
+			darkRed = 0xff00007f,
+			darkGreen = 0xff007f00,
+			darkBlue = 0xff7f0000,
+			darkYellow = 0xff007f7f,
+			darkMagenta = 0xff7f007f,
+			darkCyan = 0xff7f7f00,
+			gray = 0xff7f7f7f,
+			cornflowerBlue = 0xffed9564,
+			lightRed = 0xff7f7fff,
+			lightGreen = 0xff7fff7f,
+			lightBlue = 0xffe6d8ad,
+			lightSalmon = 0xff7aa0ff,
+			skyBlue = 0xffebce87,
+			lightGray = 0xffc0c0c0,
+			darkGray = 0xff3f3f3f;
 	};
 
 	//--------------------------------Interfaces----------------------------------//
@@ -182,18 +183,36 @@ namespace Render2D
 		void Present(bool sync = true);
 	};
 
+	class IndexBuffer : public INoncopyable
+	{
+	private:
+		ID3D11Buffer *d3dBuffer;
+
+	public:
+		inline IndexBuffer() : d3dBuffer(nullptr) {}
+		~IndexBuffer();
+
+		bool Create(Device* device, uint32 size, void* data = nullptr);
+
+		inline ID3D11Buffer* GetID3D11Buffer() { return d3dBuffer; }
+	};
+
 	//-----------------------------------Device-------------------------------------//
 
 	struct VertexColor	//12 bytes, 6 floats
 	{
 		float32x2 pos;
 		coloru32 color;
+
+		inline void set(float32x2 _pos, coloru32 _color) { pos = _pos; color = _color; }
 	};
 	struct VertexTex	//20 bytes, 5 floats
 	{
 		float32x2 pos;
 		float32x2 tex;
 		float alpha;
+
+		inline void set(float32x2 _pos, float32x2 _tex, float _alpha) { pos = _pos; tex = _tex; alpha = _alpha; }
 	};
 	struct VertexEllipse	//32 bytes, 14 floats
 	{
@@ -201,20 +220,9 @@ namespace Render2D
 		float32x2 tex;
 		float outerRadius, innerRadius;
 		coloru32 outerColor, innerColor;
-	};
 
-	enum class IndexationMode : uint8
-	{
-		None = 0,
-		Quad = 1,
-		Fan = 2,
-	};
-	enum class Effect : uint8
-	{
-		None = 0,
-		Color = 1,
-		Tex = 2,
-		Ellipse = 3,
+		inline void set(float32x2 _pos, float32x2 _tex, float _outerRadius, float _innerRadius, coloru32 _outerColor, coloru32 _innerColor)
+		{ pos = _pos; tex = _tex; outerRadius = _outerRadius; innerRadius = _innerRadius; outerColor = _outerColor; innerColor = _innerColor; }
 	};
 
 	class Device : public INoncopyable
@@ -229,120 +237,220 @@ namespace Render2D
 		ID3D11VertexShader *d3dColorVS, *d3dTexVS, *d3dEllipseVS;
 		ID3D11PixelShader *d3dColorPS, *d3dTexPS, *d3dEllipsePS;
 
+		uint32 vertexBufferSize;
 		ID3D11Buffer *d3dVertexBuffer;
-		ID3D11Buffer *d3dQuadIndexBuffer, *d3dFanIndexBuffer;
 		ID3D11Buffer *d3dTransformVSCB;
 
 		ID3D11RasterizerState *d3dDefaultRS;
 		ID3D11SamplerState *d3dDefaultSS;
 		ID3D11BlendState *d3dAlphaBS;
 
-		inline void drawNonIndexed(void* vertices, uint32 vertexCount, uint32 vertexSize);
-		inline void drawIndexedQuads(void* vertices, uint32 vertexCount, uint32 vertexSize);
-		inline void drawIndexedFan(void* vertices, uint32 vertexCount, uint32 vertexSize);
-		inline void draw(void* vertices, uint32 vertexCount, uint32 vertexSize, IndexationMode indexationMode,
-			ID3D11InputLayout* d3dIL, ID3D11VertexShader* d3dVS, ID3D11PixelShader* d3dPS);
+		inline void setD3DDeviceContextStates(ID3D11InputLayout* d3dInputLayout,
+			ID3D11VertexShader* d3dVertexShader, ID3D11PixelShader* d3dPixelShader, uint32 vertexSize);
 
-		static const uint32 vertexBufferSize = deviceVertexBufferSize;
-		static const uint32 colorVertexLimit = vertexBufferSize / sizeof(VertexColor);
-		static const uint32 texVertexLimit = vertexBufferSize / sizeof(VertexTex);
-		static const uint32 ellipseVertexLimit = vertexBufferSize / sizeof(VertexEllipse);
-		static const uint32 globalVertexLimit = maxval_constexpr(colorVertexLimit, maxval_constexpr(texVertexLimit, ellipseVertexLimit));
-		static const uint32 quadIndexBufferSize = globalVertexLimit / 2;
-		static const uint32 fanIndexBufferSize = 128;
+		IndexBuffer quadIndexBuffer;
 
 	public:
 		Device();
 		~Device();
 
-		bool Create();
+		bool Create(uint32 _vertexBufferSize = 0x4000);
 
 		void SetTarget(IRenderTarget* target);
 		void SetTexture(IShaderResource* texture);
+		void SetIndexBuffer(IndexBuffer* indexBuffer);
 		void SetTransform(matrix3x2& _transform);
 
 		void Clear(IRenderTarget* target, coloru32 color);
 		void Clear(coloru32 color);
-		void UpdateTexture(ITexture* texture, rectu32* rect, void* data);
 
-		void DrawColored(VertexColor* vertices, uint32 vertexCount, IndexationMode indexationMode);
-		void DrawTextured(VertexTex* vertices, uint32 vertexCount, IndexationMode indexationMode);
-		void DrawEllipses(VertexEllipse* vertices, uint32 vertexCount, IndexationMode indexationMode);
+		void UpdateTexture(ITexture* texture, rectu32* rect, void* data);
+		void UpdateIndexBuffer(IndexBuffer* indexBuffer, uint32 left, uint32 right, void* data);
+		void UpdateVertexBuffer(VertexColor* vertices, uint32 vertexCount);
+		void UpdateVertexBuffer(VertexTex* vertices, uint32 vertexCount);
+		void UpdateVertexBuffer(VertexEllipse* vertices, uint32 vertexCount);
+
+		void Draw(uint32 vertexCount);
+		void DrawIndexed(uint32 indexCount);
+
+		template <typename VertexType>
+		inline void Draw(VertexType* vertices, uint32 vertexCount)
+		{
+			UpdateVertexBuffer(vertices, vertexCount);
+			Draw(vertexCount);
+		}
+		template <typename VertexType>
+		inline void DrawIndexed(VertexType* vertices, uint32 vertexCount, uint32 indexCount)
+		{
+			UpdateVertexBuffer(vertices, vertexCount);
+			DrawIndexed(indexCount);
+		}
+		template <typename VertexType>
+		inline void DrawIndexed(VertexType* vertices, uint32 vertexCount, IndexBuffer* indexBuffer, uint32 indexCount)
+		{
+			UpdateVertexBuffer(vertices, vertexCount);
+			UpdateIndexBuffer(indices, indexCount);
+			DrawIndexed(indexCount);
+		}
+
+		IndexBuffer* GetQuadIndexBuffer();
 
 		static inline IDXGIFactory3* GetDXGIFactory() { return dxgiFactory; }
 		inline ID3D11Device* GetD3DDevice() { return d3dDevice; }
 		inline ID3D11DeviceContext* GetD3DDeviceContext() { return d3dContext; }
+		inline uint32 GetVertexBufferSize() { return vertexBufferSize; }
 		inline bool IsInitialized() { return d3dDevice ? true : false; }
 	};
 
-	/*//-----------------------------------Batches-------------------------------------//
+	//-----------------------------------Batches-------------------------------------//
 
-	template <uint32 _vertexBufferSize>
-	class UniversalSerialBatch
+	template <uint size>
+	class LocalMemoryBuffer
 	{
 	private:
-		Device *device;
-		void* vertexBuffer;
-		uint32 vertexBufferSize, vertexCount;
-		Effect lastEffect;
-		IndexationMode lastIndexationMode;
-		bool managedVertexBuffer;
+		uint8 buffer[size];
 
 	public:
-		inline void UniversalSerialStaticBatch(Device *_device) : device(_device), vertexCount(0),
-			lastEffect(Effect::None), lastIndexationMode(IndexationMode::None)
-		{
-
-		}
-		inline void ~UniversalSerialStaticBatch()
-		{
-			Flush();
-		}
-		inline void PushRectangle(const rectf32& rectangle, coloru32 color)
-		{
-
-		}
-		void PushEllipse()
-		{
-
-		}
-		void Flush(Device* device)
-		{
-
-		}
+		void* GetPointer() { return buffer; }
+		uint GetSize() { return size; }
 	};
 
-	template <uint32 _colorVertexLimit, uint32 _texVertexLimit, uint32 _ellipseVertexLimit>
-	class UniversalParallelStaticBatch
+	class Batch : public INoncopyable
 	{
 	private:
-		static const uint32 colorVertexLimit = minval_constexpr(_colorVertexLimit, vertexBufferSize / sizeof(VertexColor));
-		static const uint32 texVertexLimit = minval_constexpr(_texVertexLimit, vertexBufferSize / sizeof(VertexTex));
-		static const uint32 ellipseVertexLimit = minval_constexpr(_ellipseVertexLimit, vertexBufferSize / sizeof(VertexEllipse));
-
-		VertexColor colorVertexBuffer[colorVertexLimit];
-		VertexTex texVertexBuffer[texVertexLimit];
-		VertexEllipse ellipseVertexBuffer[ellipseVertexLimit];
-		uint32 colorVertexCount, texVertexCount, ellipseVertexCount;
 		Device *device;
 
-		inline void flushColor()
+		void* vertexBuffer;
+		uint32 vertexBufferSize, vertexCount;
+		enum class Effect : uint8
 		{
-			device->DrawColored(colorVertexBuffer, colorVertexCount, )
+			None = 0,
+			Color = 1,
+			Tex = 2,
+			Ellipse = 3,
+		} effect;
+		bool quadIndexationEnabled;
+		bool privateMemoryBuffer;
+
+		inline void checkState(Effect _effect, uint32 quadIndexedVertexCount,
+			uint32 quadUnindexedVertexCount, uint32 vertexSize)
+		{
+			if (effect != _effect && vertexCount)
+				Flush();
+			else if (quadIndexationEnabled ? quadIndexedVertexCount : quadUnindexedVertexCount > vertexBufferSize / vertexSize)
+				Flush();
+			effect = _effect;
 		}
 
 	public:
-		UniversalParallelStaticBatch(Device *_device = nullptr) : colorVertexCount(0), texVertexCount(0), ellipseVertexCount(0), device(_device) {}
-		~UniversalParallelStaticBatch()
+		Batch();
+		~Batch();
+
+		inline Batch(Device *_device, uint32 _vertexBufferSize = 0) { Create(_device, _vertexBufferSize); }
+		inline Batch(Device *_device, void* _vertexBuffer, uint32 _vertexBufferSize) { Create(_device, _vertexBuffer, _vertexBufferSize); }
+
+		void Create(Device *_device, uint32 _vertexBufferSize = 0);
+		void Create(Device *_device, void* _vertexBuffer, uint32 _vertexBufferSize);
+
+		inline void Flush()
 		{
-			Flush();
+			if (vertexCount)
+			{
+				if (quadIndexationEnabled)
+				{
+					device->SetIndexBuffer(device->GetQuadIndexBuffer());
+					switch (effect)
+					{
+					case Effect::Color:
+						device->DrawIndexed((VertexColor*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
+						break;
+					case Effect::Tex:
+						device->DrawIndexed((VertexTex*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
+						break;
+					case Effect::Ellipse:
+						device->DrawIndexed((VertexEllipse*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
+						break;
+					}
+				}
+				else
+				{
+					switch (effect)
+					{
+					case Effect::Color:
+						device->Draw((VertexColor*) vertexBuffer, vertexCount);
+						break;
+					case Effect::Tex:
+						device->Draw((VertexTex*) vertexBuffer, vertexCount);
+						break;
+					case Effect::Ellipse:
+						device->Draw((VertexEllipse*) vertexBuffer, vertexCount);
+						break;
+					}
+				}
+				vertexCount = 0;
+			}
 		}
 
-		inline void SetDevice(Device *_device) { device = _device; }
-
-		void Flush()
+		inline void PushRectangle(const rectf32& rect, coloru32 color)
 		{
-
+			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
+			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				vb[0].set(float32x2(rect.left, rect.top), color);
+				vb[1].set(float32x2(rect.right, rect.top), color);
+				vb[2].set(float32x2(rect.right, rect.bottom), color);
+				vb[3].set(float32x2(rect.left, rect.bottom), color);
+				vertexCount += 4;
+			}
+			else
+			{
+				vb[0].set(float32x2(rect.left, rect.top), color);
+				vb[1].set(float32x2(rect.left, rect.bottom), color);
+				vb[2].set(float32x2(rect.right, rect.top), color);
+				vb[3].set(float32x2(rect.right, rect.top), color);
+				vb[4].set(float32x2(rect.left, rect.bottom), color);
+				vb[5].set(float32x2(rect.right, rect.bottom), color);
+				vertexCount += 6;
+			}
 		}
-	};*/
+		inline void PushGradientEllipse(const rectf32& rect, coloru32 innerColor, coloru32 outerColor, float innerRadius = -0.0f, float outerRadius = 1.0f)
+		{
+			checkState(Effect::Ellipse, 4, 6, sizeof(VertexEllipse));
+			VertexEllipse* vb = (VertexEllipse*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				vb[0].set(float32x2(rect.left, rect.top), float32x2(-1.0f, -1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[1].set(float32x2(rect.right, rect.top), float32x2(1.0f, -1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[2].set(float32x2(rect.right, rect.bottom), float32x2(1.0f, 1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[3].set(float32x2(rect.left, rect.bottom), float32x2(-1.0f, 1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vertexCount += 4;
+			}
+			else
+			{
+				vb[0].set(float32x2(rect.left, rect.top), float32x2(-1.0f, -1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[1].set(float32x2(rect.left, rect.bottom), float32x2(-1.0f, 1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[2].set(float32x2(rect.right, rect.top), float32x2(1.0f, -1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[3].set(float32x2(rect.right, rect.top), float32x2(1.0f, -1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[4].set(float32x2(rect.left, rect.bottom), float32x2(-1.0f, 1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vb[5].set(float32x2(rect.right, rect.bottom), float32x2(1.0f, 1.0f), outerRadius, innerRadius, outerColor, innerColor);
+				vertexCount += 6;
+			}
+		}
+		inline void PushEllipse(const rectf32& rect, coloru32 color, float innerRadius = -0.0f)
+		{
+			PushGradientEllipse(rect, color, color, innerRadius, 1.0f);
+		}
+
+		inline void SetQuadIndexationState(bool state)
+		{
+			if (state != quadIndexationEnabled)
+			{
+				Flush();
+				quadIndexationEnabled = state;
+			}
+		}
+
+		inline Device* GetDevice() { return device; }
+	};
 }

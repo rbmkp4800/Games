@@ -186,9 +186,15 @@ void D3D11ContextPSSetShaderResources(ID3D11DeviceContext* d3dContext, UINT star
 	d3dContext->PSSetShaderResources(startSlot, elemcntof(d3dSRV), d3dSRV);
 }
 template<typename ... cbArgs>
-void D3D11ContextPSSetConstantBuffers(ID3D11DeviceContext* d3dContext, UINT startSlot, cbArgs ... srv)
+void D3D11ContextVSSetConstantBuffers(ID3D11DeviceContext* d3dContext, UINT startSlot, cbArgs ... cb)
 {
-	ID3D11Buffer *d3dCB [] = { srv ... };
+	ID3D11Buffer *d3dCB [] = { cb ... };
+	d3dContext->VSSetConstantBuffers(startSlot, elemcntof(d3dCB), d3dCB);
+}
+template<typename ... cbArgs>
+void D3D11ContextPSSetConstantBuffers(ID3D11DeviceContext* d3dContext, UINT startSlot, cbArgs ... cb)
+{
+	ID3D11Buffer *d3dCB [] = { cb ... };
 	d3dContext->PSSetConstantBuffers(startSlot, elemcntof(d3dCB), d3dCB);
 }
 inline void D3D11ContextIASetVertexBuffer(ID3D11DeviceContext* d3dContext, UINT slot,

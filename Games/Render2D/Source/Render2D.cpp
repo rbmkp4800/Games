@@ -2,7 +2,6 @@
 #include <dxgi1_3.h>
 #include <windows.ui.xaml.media.dxinterop.h>
 
-#include "LodePNG\lodepng.h"
 #include "D3DHelper.h"
 #include "DXGIHelper.h"
 
@@ -38,8 +37,6 @@ Device::~Device()
 	SafeComInterfaceRelease(d3dEllipsePS);
 
 	SafeComInterfaceRelease(d3dVertexBuffer);
-	SafeComInterfaceRelease(d3dQuadIndexBuffer);
-	SafeComInterfaceRelease(d3dFanIndexBuffer);
 	SafeComInterfaceRelease(d3dTransformVSCB);
 
 	SafeComInterfaceRelease(d3dDefaultRS);
@@ -50,8 +47,10 @@ Device::~Device()
 	SafeComInterfaceRelease(d3dContext);
 }
 
-bool Device::Create()
+bool Device::Create(uint32 _vertexBufferSize)
 {
+	vertexBufferSize = _vertexBufferSize;
+
 	D3D_FEATURE_LEVEL currentFeatureLevel, featureLevels[] =
 	{
 		D3D_FEATURE_LEVEL_11_0,
@@ -74,12 +73,12 @@ bool Device::Create()
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-	D3D11_INPUT_ELEMENT_DESC d3dVertexTexILDesc [] =
+	D3D11_INPUT_ELEMENT_DESC d3dVertexTexILDesc[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
-	D3D11_INPUT_ELEMENT_DESC d3dVertexEllipseILDesc [] =
+	D3D11_INPUT_ELEMENT_DESC d3dVertexEllipseILDesc[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -100,27 +99,6 @@ bool Device::Create()
 
 	d3dDevice->CreateBuffer(&D3D11BufferDesc(vertexBufferSize, D3D11_BIND_VERTEX_BUFFER), nullptr, &d3dVertexBuffer);
 	d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(float32x4) * 2, D3D11_BIND_CONSTANT_BUFFER), nullptr, &d3dTransformVSCB);
-
-	{
-		uint16x3 quadIndexBuffer[quadIndexBufferSize];
-		for (uint16 i = 0; i < quadIndexBufferSize / 2; i++)
-		{
-			quadIndexBuffer[i * 2 + 0].set(i * 4 + 0, i * 4 + 1, i * 4 + 3);
-			quadIndexBuffer[i * 2 + 1].set(i * 4 + 1, i * 4 + 2, i * 4 + 3);
-		}
-		d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(uint16x3) * quadIndexBufferSize, D3D11_BIND_INDEX_BUFFER),
-			&D3D11SubresourceData(quadIndexBuffer), &d3dQuadIndexBuffer);
-	}
-
-	{
-		uint16x3 fanIndexBuffer[fanIndexBufferSize];
-		for (uint16 i = 0; i < fanIndexBufferSize; i++)
-		{
-			fanIndexBuffer[i].set(0, i * 2 + 1, i * 2 + 2);
-		}
-		d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(uint16x3) * fanIndexBufferSize, D3D11_BIND_INDEX_BUFFER),
-			&D3D11SubresourceData(fanIndexBuffer), &d3dQuadIndexBuffer);
-	}
 
 	d3dDevice->CreateRasterizerState(&D3D11RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE), &d3dDefaultRS);
 	d3dDevice->CreateBlendState(&D3D11BlendDesc(
@@ -146,6 +124,10 @@ void Device::SetTexture(IShaderResource *texture)
 {
 	ID3D11ShaderResourceView *d3dShaderResourceView = texture->GetD3D11ShaderResourceView();
 	d3dContext->PSSetShaderResources(0, 1, &d3dShaderResourceView);
+}
+void Device::SetIndexBuffer(IndexBuffer* indexBuffer)
+{
+	d3dContext->IASetIndexBuffer(indexBuffer->GetID3D11Buffer(), DXGI_FORMAT_R16_UINT, 0);
 }
 void Device::SetTransform(matrix3x2& _transform)
 {
@@ -174,97 +156,71 @@ void Device::Clear(coloru32 color)
 	if (d3dRenderTargetView)
 		d3dContext->ClearRenderTargetView(d3dRenderTargetView, colorf);
 }
+
 void Device::UpdateTexture(ITexture* texture, rectu32* rect, void* data)
 {
 	d3dContext->UpdateSubresource(texture->GetD3D11Texture2D(), 0, 
 		&D3D11Box(rect->left, rect->right, rect->top, rect->bottom),
 		data, (rect->right - rect->left) * 4, 0);
 }
-
-inline void Device::drawNonIndexed(void* vertices, uint32 vertexCount, uint32 vertexSize)
+void Device::UpdateIndexBuffer(IndexBuffer* indexBuffer, uint32 left, uint32 right, void* data)
 {
-	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);
-
-	uint32 vertexLimitPerDraw = alignval(vertexBufferSize / vertexSize, 3);
-	for (uint32 drawBaseVertexIdx = 0; drawBaseVertexIdx < vertexCount; drawBaseVertexIdx += vertexLimitPerDraw)
-	{
-		uint32 vertexToDraw = minval(vertexCount - drawBaseVertexIdx, vertexLimitPerDraw);
-		d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0,
-			vertexSize * vertexToDraw), (void*)(uintptr(vertices) + drawBaseVertexIdx * vertexSize), 0, 0);
-		d3dContext->Draw(vertexToDraw, 0);
-	}
+	d3dContext->UpdateSubresource(indexBuffer->GetID3D11Buffer(), 0, &D3D11Box(left, sizeof(uint16) * right), data, 0, 0);
 }
-inline void Device::drawIndexedQuads(void* vertices, uint32 vertexCount, uint32 vertexSize)
+void Device::UpdateVertexBuffer(VertexColor* vertices, uint32 vertexCount)
 {
-	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);
-	d3dContext->IASetIndexBuffer(d3dQuadIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-
-	uint32 vertexLimitPerDraw = alignval(minval(vertexBufferSize / vertexSize, quadIndexBufferSize * 2), 4);
-	for (uint32 drawBaseVertexIdx = 0; drawBaseVertexIdx < vertexCount; drawBaseVertexIdx += vertexLimitPerDraw)
-	{
-		uint32 vertexToDraw = minval(vertexCount - drawBaseVertexIdx, vertexLimitPerDraw);
-		d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0,
-			vertexSize * vertexToDraw), (void*)(uintptr(vertices) + drawBaseVertexIdx * vertexSize), 0, 0);
-		d3dContext->DrawIndexed(vertexToDraw / 4 * 6, 0, 0);
-	}
+	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexColor) * vertexCount), vertices, 0, 0);
+	setD3DDeviceContextStates(d3dColorIL, d3dColorVS, d3dColorPS, sizeof(VertexColor));
 }
-inline void Device::drawIndexedFan(void* vertices, uint32 vertexCount, uint32 vertexSize)
+void Device::UpdateVertexBuffer(VertexTex* vertices, uint32 vertexCount)
 {
-	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);
-	d3dContext->IASetIndexBuffer(d3dFanIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-
-	uint32 vertexLimitPerDraw = minval(vertexBufferSize / vertexSize, fanIndexBufferSize + 2);
-	uint32 vertexToDraw = minval(vertexCount, vertexLimitPerDraw);
-	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, vertexSize * vertexToDraw), vertices, 0, 0);
-	d3dContext->DrawIndexed((vertexToDraw - 2) * 3, 0, 0);
-
-	for (uint32 drawBaseVertexIdx = vertexToDraw - 1; drawBaseVertexIdx < vertexCount - 1; drawBaseVertexIdx += vertexLimitPerDraw - 2)
-	{
-		vertexToDraw = minval(vertexToDraw, vertexCount - drawBaseVertexIdx + 2);
-		d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(vertexSize,
-			vertexSize * vertexToDraw), (void*) (uintptr(vertices) + drawBaseVertexIdx * vertexSize), 0, 0);
-		d3dContext->DrawIndexed((vertexToDraw - 2) * 3, 0, 0);
-	}
+	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexTex) * vertexCount), vertices, 0, 0);
+	setD3DDeviceContextStates(d3dTexIL, d3dTexVS, d3dTexPS, sizeof(VertexTex));
 }
-inline void Device::draw(void* vertices, uint32 vertexCount, uint32 vertexSize, IndexationMode indexationMode,
-	ID3D11InputLayout* d3dIL, ID3D11VertexShader* d3dVS, ID3D11PixelShader* d3dPS)
+void Device::UpdateVertexBuffer(VertexEllipse* vertices, uint32 vertexCount)
+{
+	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexEllipse) * vertexCount), vertices, 0, 0);
+	setD3DDeviceContextStates(d3dEllipseIL, d3dEllipseVS, d3dEllipsePS, sizeof(VertexEllipse));
+}
+
+inline void Device::setD3DDeviceContextStates(ID3D11InputLayout* d3dInputLayout, 
+	ID3D11VertexShader* d3dVertexShader, ID3D11PixelShader* d3dPixelShader, uint32 vertexSize)
 {
 	d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	d3dContext->IASetInputLayout(d3dIL);
-	d3dContext->VSSetShader(d3dVS, nullptr, 0);
-	d3dContext->PSSetShader(d3dPS, nullptr, 0);
+	d3dContext->IASetInputLayout(d3dInputLayout);
+	d3dContext->VSSetShader(d3dVertexShader, nullptr, 0);
+	d3dContext->PSSetShader(d3dPixelShader, nullptr, 0);
 	d3dContext->PSSetSamplers(0, 1, &d3dDefaultSS);
-	d3dContext->RSSetState(d3dDefaultRS);
+	//d3dContext->RSSetState(d3dDefaultRS);
 	d3dContext->OMSetBlendState(d3dAlphaBS, nullptr, 0xffffffff);
-	D3D11ContextPSSetConstantBuffers(d3dContext, 0, d3dTransformVSCB);
+	D3D11ContextVSSetConstantBuffers(d3dContext, 0, d3dTransformVSCB);
+	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);
+}
 
-	switch (indexationMode)
+void Device::Draw(uint32 vertexCount)
+{
+	d3dContext->Draw(vertexCount, 0);
+}
+void Device::DrawIndexed(uint32 indexCount)
+{
+	d3dContext->DrawIndexed(indexCount, 0, 0);
+}
+
+IndexBuffer* Device::GetQuadIndexBuffer()
+{
+	if (!quadIndexBuffer.GetID3D11Buffer())
 	{
-	case IndexationMode::None:
-		drawNonIndexed(vertices, vertexCount, vertexSize);
-		break;
-
-	case IndexationMode::Quad:
-		drawIndexedQuads(vertices, vertexCount, vertexSize);
-		break;
-
-	case IndexationMode::Fan:
-		drawIndexedFan(vertices, vertexCount, vertexSize);
-		break;
+		uint32 indexBufferSize = vertexBufferSize / 2;
+		uint16x3 *indexBuffer = (uint16x3*) malloc(sizeof(uint16x3) * indexBufferSize);
+		for (uint16 i = 0; i < indexBufferSize / 2; i++)
+		{
+			indexBuffer[i * 2 + 0].set(i * 4 + 0, i * 4 + 3, i * 4 + 1);
+			indexBuffer[i * 2 + 1].set(i * 4 + 1, i * 4 + 3, i * 4 + 2);
+		}
+		quadIndexBuffer.Create(this, sizeof(uint16x3) * indexBufferSize, indexBuffer);
+		free(indexBuffer);
 	}
-}
-
-void Device::DrawColored(VertexColor* vertices, uint32 vertexCount, IndexationMode indexationMode)
-{
-	draw(vertices, vertexCount, sizeof(VertexColor), indexationMode, d3dColorIL, d3dColorVS, d3dColorPS);
-}
-void Device::DrawTextured(VertexTex* vertices, uint32 vertexCount, IndexationMode indexationMode)
-{
-	draw(vertices, vertexCount, sizeof(VertexTex), indexationMode, d3dTexIL, d3dTexVS, d3dTexPS);
-}
-void Device::DrawEllipses(VertexEllipse* vertices, uint32 vertexCount, IndexationMode indexationMode)
-{
-	draw(vertices, vertexCount, sizeof(VertexEllipse), indexationMode, d3dEllipseIL, d3dEllipseVS, d3dEllipsePS);
+	return &quadIndexBuffer;
 }
 
 //--------------------------------Interfaces----------------------------------//
@@ -409,4 +365,48 @@ void SwapChain::Present(bool sync)
 SwapChain::~SwapChain()
 {
 	SafeComInterfaceRelease(dxgiSwapChain);
+}
+
+bool IndexBuffer::Create(Device* device, uint32 size, void* data)
+{
+	return SUCCEEDED(device->GetD3DDevice()->CreateBuffer(&D3D11BufferDesc(size, D3D11_BIND_INDEX_BUFFER),
+		data ? &D3D11SubresourceData(data) : nullptr, &d3dBuffer));
+}
+IndexBuffer::~IndexBuffer()
+{
+	SafeComInterfaceRelease(d3dBuffer);
+}
+
+//--------------------------------Batches--------------------------------//
+
+Batch::Batch()
+{
+	memset(this, 0, sizeof(*this));
+}
+Batch::~Batch()
+{
+	Flush();
+	if (vertexBuffer && privateMemoryBuffer)
+		free(vertexBuffer);
+}
+
+void Batch::Create(Device *_device, uint32 _vertexBufferSize)
+{
+	device = _device;
+	vertexBufferSize = _vertexBufferSize ? minval(_vertexBufferSize, device->GetVertexBufferSize()) : device->GetVertexBufferSize();
+	vertexBuffer = malloc(vertexBufferSize);
+	vertexCount = 0;
+	effect = Effect::None;
+	quadIndexationEnabled = true;
+	privateMemoryBuffer = true;
+}
+void Batch::Create(Device *_device, void* _vertexBuffer, uint32 _vertexBufferSize)
+{
+	device = _device;
+	vertexBuffer = _vertexBuffer;
+	vertexBufferSize = minval(_vertexBufferSize, device->GetVertexBufferSize());
+	vertexCount = 0;
+	effect = Effect::None;
+	quadIndexationEnabled = true;
+	privateMemoryBuffer = false;
 }

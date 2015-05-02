@@ -44,7 +44,7 @@ namespace BallsGame
 	public:
 		void Clear();
 		void InteractPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2 playerBallTranslation);
-		void UpdateAndDraw(float posDelta, Render2D::Device* device);
+		void UpdateAndDraw(float posDelta, Render2D::Batch* batch);
 	};
 
 	class Background
@@ -63,7 +63,7 @@ namespace BallsGame
 	public:
 		inline Background() : blursCount(0), rect(0.0f, 0.0f, 0.0f, 0.0f) {}
 		void Generate();
-		void UpdateAndDraw(float posDelta, Render2D::Device* device);
+		void UpdateAndDraw(float posDelta, Render2D::Batch* batch);
 	};
 
 	enum class PlayerControl

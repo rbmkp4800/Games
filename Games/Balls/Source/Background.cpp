@@ -12,7 +12,7 @@ void Background::Generate()
 
 }
 
-void Background::UpdateAndDraw(float posDelta, Device* device)
+void Background::UpdateAndDraw(float posDelta, Batch* batch)
 {
-	device->Clear(colors::darkMagenta);
+	batch->GetDevice()->Clear(colors::darkMagenta);
 }

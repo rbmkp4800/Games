@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Source\Window.cpp" />
-    <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\Field.cpp" />
     <ClCompile Include="Source\GameObjects.cpp" />
     <ClCompile Include="Source\Background.cpp" />
+    <ClCompile Include="Source\Game.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\BallsGame.h" />

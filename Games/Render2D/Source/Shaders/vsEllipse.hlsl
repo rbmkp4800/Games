@@ -24,7 +24,7 @@ struct VSOutput
 VSOutput main(VSInput input)
 {
 	VSOutput output;
-	output.pos = float4(mul(float3(input.pos, 1.0f), transform) / 2.0f + float2(0.5f, 0.5f), 0.5f, 1.0f);
+	output.pos = float4(mul(float3(input.pos, 1.0f), transform), 0.5f, 1.0f);
 	output.tex = input.tex;
 	output.radius = input.radius;
 	output.outerColor = input.outerColor;
