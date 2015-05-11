@@ -15,7 +15,10 @@ struct varx2
 	inline void set(type _x, type _y) { x = _x; y = _y; }
 
 	inline float aspect() { return (float) x / (float) y; }
-	inline type multiply() { return x * y; }
+	inline type mul() { return x * y; }
+	inline type sum() { return x + y; }
+	inline bool any() { return x || y ? true : false; }
+	inline bool all() { return x && y ? true : false; }
 
 	template <typename _type> inline bool operator == (const varx2<_type>& val) const
 	{
@@ -88,6 +91,9 @@ struct varx3
 	inline varx3(type _x, type _y, type _z) : x(_x), y(_y), z(_z) {}
 	inline void set(type _x, type _y, type _z) { x = _x; y = _y; z = _z; }
 
+	inline bool any() { return x || y || z ? true : false; }
+	inline bool all() { return x && y && z ? true : false; }
+
 	template <typename _type> inline bool operator == (const varx3<_type>& val) const
 	{
 		return x == val.x && y == val.y && z == val.z;
@@ -158,6 +164,9 @@ struct varx4
 	inline varx4() = default;
 	inline varx4(type _x, type _y, type _z, type _w) : x(_x), y(_y), z(_z), w(_w) {}
 	inline void set(type _x, type _y, type _z, type _w) { x = _x; y = _y; z = _z; w = _w; }
+
+	inline bool any() { return x || y || z || w ? true : false; }
+	inline bool all() { return x && y && z && w ? true : false; }
 
 	template <typename _type> inline bool operator == (const varx4<_type>& val) const
 	{
@@ -320,6 +329,11 @@ template <typename type>
 inline type cross(const varx2<type>& a, const varx2<type>& b)
 {
 	return a.x * b.y - a.y * b.x;
+}
+template <typename type>
+inline varx2<type> normal(const varx2<type>& v)
+{
+	return varx2<type>(v.y, -v.x);
 }
 
 #endif

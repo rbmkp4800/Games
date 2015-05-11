@@ -12,6 +12,8 @@ float4 main(PSInput input) : SV_TARGET
 	float distance = length(input.tex.xy);
 	clip(input.radius.x - distance);
 	clip(distance - input.radius.y <= 0.0f ? -1.0f : 1.0f);
-	return lerp(input.innerColor, input.outerColor,
+	float4 color = lerp(input.innerColor, input.outerColor,
 		(distance - input.radius.y) / (input.radius.x - input.radius.y));
+	clip(color.w - 0.01f);
+	return color;
 }

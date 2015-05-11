@@ -1,12 +1,13 @@
 #include <extypes.h>
 #include <extypes.vectors.h>
+
 #include <Render2D.h>
 
 namespace BallsGame
 {
 	struct PlayerBall
 	{
-		float32x2 position, speed, acceleration;
+		float32x2 position, speed;
 		float radius, charge;
 	};
 
@@ -26,11 +27,12 @@ namespace BallsGame
 		float radius, charge;
 
 	public:
-		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& playerBallTranslation);
-		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall);
+		StaticBall() = default;
+		inline StaticBall(float x, float y, float _radius, float _charge) : radius(_radius), charge(_charge) { position.set(x, y); }
 
-		void DrawBackground();
-		void DrawForeground();
+		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& translation);
+		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall);
+		void Draw(Render2D::Batch* batch);
 	};
 
 	class Field
@@ -43,7 +45,8 @@ namespace BallsGame
 
 	public:
 		void Clear();
-		void InteractPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2 playerBallTranslation);
+		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall);
+		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& translation);
 		void UpdateAndDraw(float posDelta, Render2D::Batch* batch);
 	};
 
@@ -78,13 +81,19 @@ namespace BallsGame
 	class Game
 	{
 	private:
-		static Render2D::Device device;
-
-		Render2D::SwapChain swapChain;
-
-		PlayerBall playerBall;
 		Field field;
 		Background background;
+		PlayerBall playerBall;
+		struct
+		{
+			bool left, right, up, down;
+		} controls;
+		float aspect, cameraDelta;
+		float64 globalPosition;
+
+		static Render2D::Device device;
+		Render2D::SwapChain swapChain;
+		uint32x2 outputSize;
 
 	public:
 		bool Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY);

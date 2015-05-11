@@ -129,7 +129,7 @@ void Device::SetIndexBuffer(IndexBuffer* indexBuffer)
 {
 	d3dContext->IASetIndexBuffer(indexBuffer->GetID3D11Buffer(), DXGI_FORMAT_R16_UINT, 0);
 }
-void Device::SetTransform(matrix3x2& _transform)
+void Device::SetTransform(const matrix3x2& _transform)
 {
 	struct
 	{

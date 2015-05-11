@@ -1,5 +1,6 @@
 #include <extypes.h>
 #include <extypes.vectors.h>
+#include <extypes.vectors.math.h>
 
 struct IUnknown;
 
@@ -23,23 +24,6 @@ struct matrix3x2;
 
 namespace Render2D
 {
-	static const uint32 deviceVertexBufferSize = 0x4000;
-
-	enum class Direction : uint8
-	{
-		None = 0,
-		Up = 1,
-		Right = 2,
-		Down = 3,
-		Left = 4,
-	};
-	enum class Orientation : uint8
-	{
-		None = 0,
-		Horizontal = 1,
-		Vertical = 2,
-	};
-
 	struct coloru32
 	{
 		union
@@ -249,6 +233,7 @@ namespace Render2D
 			ID3D11VertexShader* d3dVertexShader, ID3D11PixelShader* d3dPixelShader, uint32 vertexSize);
 
 		IndexBuffer quadIndexBuffer;
+		float aaPixelSize;
 
 	public:
 		Device();
@@ -259,7 +244,12 @@ namespace Render2D
 		void SetTarget(IRenderTarget* target);
 		void SetTexture(IShaderResource* texture);
 		void SetIndexBuffer(IndexBuffer* indexBuffer);
-		void SetTransform(matrix3x2& _transform);
+		void SetTransform(const matrix3x2& _transform);
+		inline void SetTransform(const matrix3x2& transform, float _aaPixelSize)
+		{
+			aaPixelSize = _aaPixelSize;
+			SetTransform(transform);
+		}
 
 		void Clear(IRenderTarget* target, coloru32 color);
 		void Clear(coloru32 color);
@@ -299,10 +289,27 @@ namespace Render2D
 		inline ID3D11Device* GetD3DDevice() { return d3dDevice; }
 		inline ID3D11DeviceContext* GetD3DDeviceContext() { return d3dContext; }
 		inline uint32 GetVertexBufferSize() { return vertexBufferSize; }
+		inline float GetAAPixelSize() { return aaPixelSize; }
 		inline bool IsInitialized() { return d3dDevice ? true : false; }
 	};
 
 	//-----------------------------------Batches-------------------------------------//
+
+	enum class LineGradientType : uint8
+	{
+		None = 0,
+		LeftToRight = 1,
+		BeginToEnd = 2,
+	};
+
+	inline rectf32 circle(float32x2 center, float radius)
+	{
+		return rectf32(center.x - radius, center.y - radius, center.x + radius, center.y + radius);
+	}
+	inline rectf32 ellipse(float32x2 center, float radiusx, float radiusy)
+	{
+		return rectf32(center.x - radiusx, center.y - radiusy, center.x + radiusx, center.y + radiusy);
+	}
 
 	template <uint size>
 	class LocalMemoryBuffer
@@ -437,11 +444,174 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushEllipse(const rectf32& rect, coloru32 color, float innerRadius = -0.0f)
+		inline void PushEllipse(const rectf32& rect, coloru32 color, float innerRadius = -0.0f, float outerRadius = 1.0f)
 		{
-			PushGradientEllipse(rect, color, color, innerRadius, 1.0f);
+			PushGradientEllipse(rect, color, color, innerRadius, outerRadius);
 		}
+		inline void PushCircleAA(float32x2 center, float radius, coloru32 color, float innerRadius = -0.0f)
+		{
+			float halfPixel = device->GetAAPixelSize() / 2.0f;
+			float halfPixelByRadius = halfPixel / (radius + halfPixel);
+			rectf32 rect = circle(center, radius + halfPixel);
+			coloru32 tansparentColor(color.rgba, uint8(0));
+			if (innerRadius > 0.0f)
+			{
+				innerRadius *= radius / (radius + halfPixel);
+				PushGradientEllipse(rect, tansparentColor, color, innerRadius - halfPixelByRadius, innerRadius + halfPixelByRadius);
+				PushGradientEllipse(rect, color, color, innerRadius + halfPixelByRadius, 1.0f - halfPixelByRadius * 2.0f);
+			}
+			else
+			{
+				PushGradientEllipse(rect, color, color, -0.0f, 1.0f - halfPixelByRadius * 2.0f);
+			}
+			PushGradientEllipse(rect, color, tansparentColor, 1.0f - halfPixelByRadius * 2.0f, 1.0f);
+		}
+		inline void PushLineAligned(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, LineGradientType gradientType)
+		{
+			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
+			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
+			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				switch (gradientType)
+				{
+				case LineGradientType::LeftToRight:
+					vb[0].set(begin + v, color1);
+					vb[1].set(end + v, color1);
+					vb[2].set(end, color2);
+					vb[3].set(begin, color2);
+					break;
+				case LineGradientType::BeginToEnd:
+					vb[0].set(begin + v, color1);
+					vb[1].set(end + v, color2);
+					vb[2].set(end, color2);
+					vb[3].set(begin, color1);
+					break;
+				}
+				vertexCount += 4;
+			}
+			else
+			{
+				switch (gradientType)
+				{
+				case LineGradientType::LeftToRight:
+					vb[0].set(begin + v, color1);
+					vb[1].set(begin, color2);
+					vb[2].set(end + v, color1);
+					vb[3].set(end + v, color1);
+					vb[4].set(begin, color2);
+					vb[5].set(end, color2);
 
+					break;
+				case LineGradientType::BeginToEnd:
+					vb[0].set(begin + v, color1);
+					vb[1].set(begin, color1);
+					vb[2].set(end + v, color2);
+					vb[3].set(end + v, color2);
+					vb[4].set(begin, color1);
+					vb[5].set(end, color2);
+					break;
+				}
+				vertexCount += 6;
+			}
+		}
+		inline void PushLineAligned(float32x2 begin, float32x2 end, float width, coloru32 color)
+		{
+			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
+			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
+			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				vb[0].set(begin + v, color);
+				vb[1].set(end + v, color);
+				vb[2].set(end, color);
+				vb[3].set(begin, color);
+				vertexCount += 4;
+			}
+			else
+			{
+				vb[0].set(begin + v, color);
+				vb[1].set(begin, color);
+				vb[2].set(end + v, color);
+				vb[3].set(end + v, color);
+				vb[4].set(begin, color);
+				vb[5].set(end, color);
+				vertexCount += 6;
+			}
+		}
+		inline void PushLine(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, LineGradientType gradientType)
+		{
+			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
+			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
+			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				switch (gradientType)
+				{
+				case LineGradientType::LeftToRight:
+					vb[0].set(begin + v, color1);
+					vb[1].set(end + v, color1);
+					vb[2].set(end - v, color2);
+					vb[3].set(begin - v, color2);
+					break;
+				case LineGradientType::BeginToEnd:
+					vb[0].set(begin + v, color1);
+					vb[1].set(end + v, color2);
+					vb[2].set(end - v, color2);
+					vb[3].set(begin - v, color1);
+					break;
+				}
+				vertexCount += 4;
+			}
+			else
+			{
+				switch (gradientType)
+				{
+				case LineGradientType::LeftToRight:
+					vb[0].set(begin + v, color1);
+					vb[1].set(begin - v, color2);
+					vb[2].set(end + v, color1);
+					vb[3].set(end + v, color1);
+					vb[4].set(begin - v, color2);
+					vb[5].set(end - v, color2);
+
+					break;
+				case LineGradientType::BeginToEnd:
+					vb[0].set(begin + v, color1);
+					vb[1].set(begin - v, color1);
+					vb[2].set(end + v, color2);
+					vb[3].set(end + v, color2);
+					vb[4].set(begin - v, color1);
+					vb[5].set(end - v, color2);
+					break;
+				}
+				vertexCount += 6;
+			}
+		}
+		inline void PushLine(float32x2 begin, float32x2 end, float width, coloru32 color)
+		{
+			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
+			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
+			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				vb[0].set(begin + v, color);
+				vb[1].set(end + v, color);
+				vb[2].set(end - v, color);
+				vb[3].set(begin - v, color);
+				vertexCount += 4;
+			}
+			else
+			{
+				vb[0].set(begin + v, color);
+				vb[1].set(begin - v, color);
+				vb[2].set(end + v, color);
+				vb[3].set(end + v, color);
+				vb[4].set(begin - v, color);
+				vb[5].set(end - v, color);
+				vertexCount += 6;
+			}
+		}
 		inline void SetQuadIndexationState(bool state)
 		{
 			if (state != quadIndexationEnabled)

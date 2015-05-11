@@ -2,38 +2,42 @@
 
 #include "BallsGame.h"
 
+using namespace BallsGame;
+
+Game game;
+
 inline void SetGameControlsStateByKeyCode(uint32 keycode, bool state)
 {
-	/*switch (keycode)
+	switch (keycode)
 	{
-	case 'Q':
-		Game::SetControlState(Control::PositiveCharge, state);
+	/*case 'Q':
+		game.SetPlayerControlState(PlayerControl ::PositiveCharge, state);
 		break;
 	case 'E':
 		Game::SetControlState(Control::NegativeCharge, state);
-		break;
+		break;*/
 
-	case VK_UP:
-	case 'W':
-		Game::SetControlState(Control::Up, state);
-		break;
-	case VK_DOWN:
-	case 'S':
-		Game::SetControlState(Control::Down, state);
-		break;
 	case VK_LEFT:
 	case 'A':
-		Game::SetControlState(Control::Left, state);
+		game.SetPlayerControlState(PlayerControl::Left, state);
 		break;
 	case VK_RIGHT:
 	case 'D':
-		Game::SetControlState(Control::Right, state);
+		game.SetPlayerControlState(PlayerControl::Right, state);
+		break;
+	case VK_UP:
+	case 'W':
+		game.SetPlayerControlState(PlayerControl::Up, state);
+		break;
+	case VK_DOWN:
+	case 'S':
+		game.SetPlayerControlState(PlayerControl::Down, state);
 		break;
 
 	case 'R':
-		Game::Restart();
+		//Game::Restart();
 		break;
-	}*/
+	}
 }
 
 LRESULT __stdcall WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -60,20 +64,6 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-DWORD __stdcall GameThreadMain(void* args)
-{
-	HWND hWnd = (HWND) args;
-	RECT clientRect = { 0 };
-	GetClientRect(hWnd, &clientRect);
-
-	BallsGame::Game game;
-	game.Create(hWnd, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
-	for (;;)
-		game.Update(0.0f);
-
-	return 0;
-}
-
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdShow)
 {
 	wchar_t wndClass [] = L"BallsGame.WndClass";
@@ -94,19 +84,38 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdS
 	RegisterClassEx(&wcex);
 
 	HWND hWnd = CreateWindow(wndClass, L"Balls Game", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-		800, 800, nullptr, nullptr, hInstance, nullptr);
+		600, 1024, nullptr, nullptr, hInstance, nullptr);
 
-	CreateThread(nullptr, 0, GameThreadMain, hWnd, 0, nullptr);
+	RECT clientRect = { 0 };
+	GetClientRect(hWnd, &clientRect);
+	game.Create(hWnd, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 
+	uint64 counterFrequencyU64 = 0, lastTick = 0;
+	QueryPerformanceFrequency(PLARGE_INTEGER(&counterFrequencyU64));
+	QueryPerformanceCounter(PLARGE_INTEGER(&lastTick));
+	float counterFrequency = float(counterFrequencyU64);
+
 	MSG msg = { 0 };
-	while (GetMessage(&msg, nullptr, 0, 0))
+	do
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else
+		{
+			uint64 tick = 0;
+			QueryPerformanceCounter(PLARGE_INTEGER(&tick));
+			//game.Update(float(tick - lastTick) / counterFrequency);
+			game.Update(0.016f);
+			//game.Update(float((rand() % 40) + 1) / 1000.0f);
+			lastTick = tick;
+		}
+	} while (msg.message != WM_QUIT);
 
 	return 0;
 }

@@ -14,5 +14,5 @@ void Background::Generate()
 
 void Background::UpdateAndDraw(float posDelta, Batch* batch)
 {
-	batch->GetDevice()->Clear(colors::darkMagenta);
+	batch->GetDevice()->Clear(colors::darkBlue);
 }
