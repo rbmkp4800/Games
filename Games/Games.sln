@@ -16,6 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Global", "Global", "{3E4F96
 		Global\extypes.h = Global\extypes.h
 		Global\extypes.matrix3x2.h = Global\extypes.matrix3x2.h
 		Global\extypes.matrix4x4.h = Global\extypes.matrix4x4.h
+		Global\extypes.queue.h = Global\extypes.queue.h
 		Global\extypes.vectors.h = Global\extypes.vectors.h
 		Global\extypes.vectors.math.h = Global\extypes.vectors.math.h
 	EndProjectSection

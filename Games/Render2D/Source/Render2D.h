@@ -24,6 +24,8 @@ struct matrix3x2;
 
 namespace Render2D
 {
+	static const float opacityThreshold = 0.01f;
+
 	struct coloru32
 	{
 		union
@@ -69,12 +71,14 @@ namespace Render2D
 			darkYellow = 0xff007f7f,
 			darkMagenta = 0xff7f007f,
 			darkCyan = 0xff7f7f00,
+			dodgerBlue = 0xffff901e,
 			gray = 0xff7f7f7f,
 			cornflowerBlue = 0xffed9564,
 			lightRed = 0xff7f7fff,
 			lightGreen = 0xff7fff7f,
 			lightBlue = 0xffe6d8ad,
 			lightSalmon = 0xff7aa0ff,
+			lightSkyBlue = 0xffface87,
 			skyBlue = 0xffebce87,
 			lightGray = 0xffc0c0c0,
 			darkGray = 0xff3f3f3f;
@@ -236,10 +240,12 @@ namespace Render2D
 		float aaPixelSize;
 
 	public:
+		static const uint32 defaultVertexBufferSize = 0x10000;
+
 		Device();
 		~Device();
 
-		bool Create(uint32 _vertexBufferSize = 0x4000);
+		bool Create(uint32 _vertexBufferSize = defaultVertexBufferSize);
 
 		void SetTarget(IRenderTarget* target);
 		void SetTexture(IShaderResource* texture);
@@ -311,7 +317,7 @@ namespace Render2D
 		return rectf32(center.x - radiusx, center.y - radiusy, center.x + radiusx, center.y + radiusy);
 	}
 
-	template <uint size>
+	template <uintptr size>
 	class LocalMemoryBuffer
 	{
 	private:
@@ -319,7 +325,7 @@ namespace Render2D
 
 	public:
 		void* GetPointer() { return buffer; }
-		uint GetSize() { return size; }
+		uintptr GetSize() { return size; }
 	};
 
 	class Batch : public INoncopyable
@@ -344,7 +350,7 @@ namespace Render2D
 		{
 			if (effect != _effect && vertexCount)
 				Flush();
-			else if (quadIndexationEnabled ? quadIndexedVertexCount : quadUnindexedVertexCount > vertexBufferSize / vertexSize)
+			else if (vertexCount + (quadIndexationEnabled ? quadIndexedVertexCount : quadUnindexedVertexCount) > vertexBufferSize / vertexSize)
 				Flush();
 			effect = _effect;
 		}
@@ -622,5 +628,10 @@ namespace Render2D
 		}
 
 		inline Device* GetDevice() { return device; }
+	};
+
+	class TextBatch : public INoncopyable
+	{
+
 	};
 }

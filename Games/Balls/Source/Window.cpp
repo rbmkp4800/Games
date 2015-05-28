@@ -10,12 +10,12 @@ inline void SetGameControlsStateByKeyCode(uint32 keycode, bool state)
 {
 	switch (keycode)
 	{
-	/*case 'Q':
-		game.SetPlayerControlState(PlayerControl ::PositiveCharge, state);
+	case 'Q':
+		game.SetPlayerControlState(PlayerControl::PositiveCharge, state);
 		break;
 	case 'E':
-		Game::SetControlState(Control::NegativeCharge, state);
-		break;*/
+		game.SetPlayerControlState(PlayerControl::NegativeCharge, state);
+		break;
 
 	case VK_LEFT:
 	case 'A':
@@ -84,7 +84,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdS
 	RegisterClassEx(&wcex);
 
 	HWND hWnd = CreateWindow(wndClass, L"Balls Game", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-		600, 1024, nullptr, nullptr, hInstance, nullptr);
+		448, 768, nullptr, nullptr, hInstance, nullptr);
 
 	RECT clientRect = { 0 };
 	GetClientRect(hWnd, &clientRect);

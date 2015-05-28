@@ -6,9 +6,11 @@
     <ClCompile Include="Source\GameObjects.cpp" />
     <ClCompile Include="Source\Background.cpp" />
     <ClCompile Include="Source\Game.cpp" />
+    <ClCompile Include="Source\Random.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\BallsGame.h" />
+    <ClInclude Include="Source\Random.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\ballMask.png" />

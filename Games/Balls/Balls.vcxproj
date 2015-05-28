@@ -80,12 +80,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\BallsGame.h" />
+    <ClInclude Include="Source\Random.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Background.cpp" />
     <ClCompile Include="Source\Field.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameObjects.cpp" />
+    <ClCompile Include="Source\Random.cpp" />
     <ClCompile Include="Source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>

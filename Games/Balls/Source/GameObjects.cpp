@@ -6,13 +6,20 @@ using namespace BallsGame;
 
 //--------------------------StaticBall--------------------------//
 
-static const float staticBallBounceSpeedReduceCoef = 1.0f;
+static const float staticBallBounceSpeedReduceCoef = 0.5f;
+static const float staticBallChargeAbsValue = 1.0f;
+static const uint32 staticBallNeutralColor = Render2D::colors::gray;
+static const uint32 staticBallPositiveColor = Render2D::colors::skyBlue;
+static const uint32 staticBallNegativeColor = Render2D::colors::lightSalmon;
+static const float staticBallDistanceForceOpac0 = 0.8f;
+static const float staticBallDistanceForceOpac1 = 0.1f;
 
 void StaticBall::CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& translation)
 {
-	float32x2 distanceVector = position - playerBall.position;
 	if (!translation.any())
 		return;
+
+	float32x2 distanceVector = position - playerBall.position;
 	float distance = length(distanceVector);
 	float translationLength = length(translation);
 	float minDistance = playerBall.radius + radius;
@@ -41,17 +48,59 @@ void StaticBall::CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, 
 	playerBall.speed = reflectionVector * length(playerBall.speed) * staticBallBounceSpeedReduceCoef;
 }
 
-float32x2 StaticBall::GetForceAppliedToPlayerBall(const PlayerBall& playerBall)
+float32x2 StaticBall::GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float playerBallCharge)
 {
-	float32x2 distanceVector = position - playerBall.position;
-	float distance = length(distanceVector);
-	return float32x2(0.0f, 0.0f);
+	switch (charge)
+	{
+	case Charge::Positive:
+	case Charge::Negative:
+	{
+		float32x2 distanceVector = position - playerBall.position;
+		float distance = length(distanceVector);
+		return distanceVector * (charge == Charge::Positive ? staticBallChargeAbsValue : -staticBallChargeAbsValue)
+			* playerBallCharge / (distance * distance * distance);
+	}
+	default: return float32x2(0.0f, 0.0f);
+	}
+}
+
+void StaticBall::DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge)
+{
+	using namespace Render2D;
+	if (playerBallCharge == 0.0f)
+		return;
+
+	float thisBallCharge = 0.0f;
+	switch (charge)
+	{
+	case Charge::Positive: thisBallCharge = 1.0f; break;
+	case Charge::Negative: thisBallCharge = -1.0f; break;
+	default: return;
+	}
+
+	float opacity = saturate((staticBallDistanceForceOpac0 - length(position - playerBall.position)) /
+		(staticBallDistanceForceOpac0 - staticBallDistanceForceOpac1));
+	if (opacity >= opacityThreshold)
+	{
+		uint32 color = thisBallCharge * playerBallCharge < 0.0f ? staticBallNegativeColor : staticBallPositiveColor;
+		coloru32 colorCenter(color, opacity), colorSide(color, uint8(0));
+		batch->PushLineAligned(position, playerBall.position, 0.05f, colorSide, colorCenter, LineGradientType::LeftToRight);
+		batch->PushLineAligned(position, playerBall.position, -0.05f, colorSide, colorCenter, LineGradientType::LeftToRight);
+	}
 }
 
 void StaticBall::Draw(Render2D::Batch* batch)
 {
 	using namespace Render2D;
-	//batch->PushCircleAA(position, radius * 0.8, colors::lightSalmon);
-	batch->PushCircleAA(position, radius * 0.8f, charge < 0.0f ? colors::skyBlue : colors::lightSalmon);
-	batch->PushCircleAA(position, radius, colors::white, 0.89f);
+
+	coloru32 color = 0;
+	switch (charge)
+	{
+	case Charge::Positive: color = staticBallPositiveColor; break;
+	case Charge::Negative: color = staticBallNegativeColor; break;
+	default: color = staticBallNeutralColor; break;
+	}
+	batch->PushCircleAA(position, radius * 0.8f, color);
+	batch->PushCircleAA(position, radius, coloru32(colors::white), 0.89f);
+	//batch->PushCircleAA(position, radius, color);
 }

@@ -6,6 +6,6 @@ struct PSInput
 
 float4 main(PSInput input) : SV_TARGET
 {
-	clip(input.color.w - 0.01f);
+	clip(input.color.w - 0.004f);
 	return input.color;
 }

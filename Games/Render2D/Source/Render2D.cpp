@@ -191,7 +191,7 @@ inline void Device::setD3DDeviceContextStates(ID3D11InputLayout* d3dInputLayout,
 	d3dContext->VSSetShader(d3dVertexShader, nullptr, 0);
 	d3dContext->PSSetShader(d3dPixelShader, nullptr, 0);
 	d3dContext->PSSetSamplers(0, 1, &d3dDefaultSS);
-	//d3dContext->RSSetState(d3dDefaultRS);
+	d3dContext->RSSetState(d3dDefaultRS);
 	d3dContext->OMSetBlendState(d3dAlphaBS, nullptr, 0xffffffff);
 	D3D11ContextVSSetConstantBuffers(d3dContext, 0, d3dTransformVSCB);
 	D3D11ContextIASetVertexBuffer(d3dContext, 0, d3dVertexBuffer, vertexSize);

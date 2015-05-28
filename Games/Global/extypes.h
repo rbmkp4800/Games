@@ -14,9 +14,6 @@ using sint64 = signed long long int;
 using float32 = float;
 using float64 = double;
 
-using uint = unsigned int;
-using sing = signed int;
-
 #ifdef _WIN64
 using uintptr = uint64;
 #else
@@ -30,8 +27,8 @@ void xorswap(type& val1, type& val2)
 	val2 ^= val1;
 	val1 ^= val2;
 }
-template <typename type, uint size>
-uint elemcntof(type(&)[size]) { return size; }
+template <typename type, uintptr size>
+uintptr elemcntof(type(&)[size]) { return size; }
 
 template <typename type>
 inline type absval(type val) { return val >= type(0) ? val : -val; }
