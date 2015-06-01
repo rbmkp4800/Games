@@ -5,7 +5,7 @@
 
 void Random::Seed()
 {
-	srand(time(nullptr));
+	srand(uint32(time(nullptr)));
 }
 void Random::Seed(uint32 seed)
 {
@@ -14,7 +14,7 @@ void Random::Seed(uint32 seed)
 
 bool Random::GetBool()
 {
-	return rand() % 2;
+	return rand() % 2 ? true : false;
 }
 float Random::GetFloat(float mod)
 {

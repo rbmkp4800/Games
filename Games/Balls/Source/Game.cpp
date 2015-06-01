@@ -1,5 +1,7 @@
 #include "BallsGame.h"
 
+#include "Random.h"
+
 #include <extypes.matrix3x2.h>
 #include <memory.h>
 
@@ -12,8 +14,8 @@ static const float playerBallDefaultRadius = 0.06f;
 static const float playerBallDefaultOutputVerticalPos = 0.4f;
 static const float playerBallControlsAccel = 2.0f;
 static const float playerBallControlsDefaultCharge = 0.1f;
-static const float cameraDeltaDecreaseExponentCoef = 0.1f;
-static const float cameraDeltaCoef = 0.2f;
+static const float cameraDeltaDecreaseExponentCoef = 0.2f;
+static const float cameraDeltaCoef = 0.5f;
 static const float gravityAccel = -0.4f;
 
 bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
@@ -24,8 +26,9 @@ bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 		return false;
 	device.SetTarget(&swapChain);
 
-	field.Clear();
-	background.Generate();
+	Random::Seed(2);
+	field.Initialize();
+	background.Initialize();
 
 	outputSize.set(outputSizeX, outputSizeY);
 	aspect = float(outputSizeX) / float(outputSizeY);
@@ -61,7 +64,7 @@ void Game::Update(float timeDelta)
 		acceleration.x -= playerBallControlsAccel;
 	if (controls.right)
 		acceleration.x += playerBallControlsAccel;
-	if (controls.up)
+	//if (controls.up)
 		acceleration.y += playerBallControlsAccel;
 	if (controls.down)
 		acceleration.y -= playerBallControlsAccel;
@@ -101,11 +104,11 @@ void Game::Update(float timeDelta)
 
 	device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f, 2.0f * aspect,
 		0.0f, playerBallDefaultOutputVerticalPos / aspect), 1.0f / float(outputSize.x));
-	background.UpdateAndDraw(-posDelta, &batch);
+	background.UpdateAndDraw(-posDelta, cameraDelta, &batch);
 	batch.Flush();
 
 	device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f, 2.0f * aspect,
-		0.0f, playerBallDefaultOutputVerticalPos / aspect + cameraDelta), 1.0f / float(outputSize.x));
+		0.0f, playerBallDefaultOutputVerticalPos / aspect/* + cameraDelta*/), 1.0f / float(outputSize.x));
 	field.UpdateAndDraw(-posDelta, &batch, playerBall, playerBallCharge);
 
 	batch.PushCircleAA(playerBall.position, playerBall.radius * 0.85f, colors::white);

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Game2", "Game2\Game2.vcxproj", "{CEBD20B1-238F-479B-B698-C29FFF72CAC1}"
 EndProject
@@ -11,17 +11,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bomberman", "Bomberman\Bomb
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{DB2C4092-4F60-43F4-9F56-1EFC22F98F30}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Global", "Global", "{3E4F96C2-3E29-42BB-B857-E10208D18BE7}"
-	ProjectSection(SolutionItems) = preProject
-		Global\extypes.h = Global\extypes.h
-		Global\extypes.matrix3x2.h = Global\extypes.matrix3x2.h
-		Global\extypes.matrix4x4.h = Global\extypes.matrix4x4.h
-		Global\extypes.queue.h = Global\extypes.queue.h
-		Global\extypes.vectors.h = Global\extypes.vectors.h
-		Global\extypes.vectors.math.h = Global\extypes.vectors.math.h
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Balls", "Balls\Balls.vcxproj", "{033E4B9D-13F0-4EFF-AA00-D26242F892FC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Global", "Global\Global.vcxproj", "{5975DF4F-D31B-4C04-B869-86BC176A2126}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +41,10 @@ Global
 		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Debug|Win32.Build.0 = Debug|Win32
 		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Release|Win32.ActiveCfg = Release|Win32
 		{033E4B9D-13F0-4EFF-AA00-D26242F892FC}.Release|Win32.Build.0 = Release|Win32
+		{5975DF4F-D31B-4C04-B869-86BC176A2126}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5975DF4F-D31B-4C04-B869-86BC176A2126}.Debug|Win32.Build.0 = Debug|Win32
+		{5975DF4F-D31B-4C04-B869-86BC176A2126}.Release|Win32.ActiveCfg = Release|Win32
+		{5975DF4F-D31B-4C04-B869-86BC176A2126}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

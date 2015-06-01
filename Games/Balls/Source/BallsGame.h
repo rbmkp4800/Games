@@ -60,7 +60,7 @@ namespace BallsGame
 		void spawnGameObjects();
 
 	public:
-		void Clear();
+		void Initialize();
 		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float playerBallCharge);
 		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2 translation);
 		void UpdateAndDraw(float posDelta, Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge);
@@ -87,8 +87,8 @@ namespace BallsGame
 
 	public:
 		inline Background() : blursCount(0), nextBlurSpawnDelta(0) {}
-		void Generate();
-		void UpdateAndDraw(float posDelta, Render2D::Batch* batch);
+		void Initialize();
+		void UpdateAndDraw(float posDelta, float cameraDelta, Render2D::Batch* batch);
 	};
 
 	enum class PlayerControl

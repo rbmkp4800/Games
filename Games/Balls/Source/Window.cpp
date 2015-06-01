@@ -84,7 +84,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdS
 	RegisterClassEx(&wcex);
 
 	HWND hWnd = CreateWindow(wndClass, L"Balls Game", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-		448, 768, nullptr, nullptr, hInstance, nullptr);
+		576, 1024, nullptr, nullptr, hInstance, nullptr);
 
 	RECT clientRect = { 0 };
 	GetClientRect(hWnd, &clientRect);

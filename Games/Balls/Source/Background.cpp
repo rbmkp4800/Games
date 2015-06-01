@@ -22,13 +22,13 @@ void Background::spawnBlurs()
 	}
 }
 
-void Background::Generate()
+void Background::Initialize()
 {
 	nextBlurSpawnDelta = -1.0f;
 	spawnBlurs();
 }
 
-void Background::UpdateAndDraw(float posDelta, Batch* batch)
+void Background::UpdateAndDraw(float posDelta, float cameraDelta, Batch* batch)
 {
 	nextBlurSpawnDelta += posDelta;
 	spawnBlurs();
@@ -37,8 +37,8 @@ void Background::UpdateAndDraw(float posDelta, Batch* batch)
 	for (uint32 i = 0; i < blursCount; i++)
 	{
 		blurs[i].move(posDelta);
-		rectf32 circleRect = circle(blurs[i].position, blurs[i].radius);
-		coloru32 innerColor = coloru32(blurs[i].color, 0.07f / blurs[i].radius);
+		rectf32 circleRect = circle(blurs[i].position + float32x2(0.0f, cameraDelta * blurs[i].posDeltaCoef), blurs[i].radius);
+		coloru32 innerColor = coloru32(blurs[i].color, 0.12f / blurs[i].radius);
 		coloru32 outerColor = coloru32(blurs[i].color, uint8(0));
 		//batch->PushEllipse(circleRect, innerColor);
 		//batch->PushEllipse(circleRect, innerColor, -0.0f, 0.4f);

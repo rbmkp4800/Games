@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\extypes.h" />
+    <ClInclude Include="Source\extypes.matrix3x2.h" />
+    <ClInclude Include="Source\extypes.matrix4x4.h" />
+    <ClInclude Include="Source\extypes.queue.h" />
+    <ClInclude Include="Source\extypes.vectors.h" />
+    <ClInclude Include="Source\extypes.vectors.math.h" />
+  </ItemGroup>
+</Project>
