@@ -16,7 +16,7 @@ static const float playerBallControlsAccel = 2.0f;
 static const float playerBallControlsDefaultCharge = 0.1f;
 static const float cameraDeltaDecreaseExponentCoef = 0.2f;
 static const float cameraDeltaCoef = 0.5f;
-static const float gravityAccel = -0.4f;
+static const float gravityAccel = 0.0f; //-0.4f;
 
 bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 {
@@ -58,13 +58,13 @@ inline matrix3x2 translationScaleTranslation(float xtrans1, float ytrans1, float
 void Game::Update(float timeDelta)
 {
 	float32x2 acceleration(0.0f, gravityAccel);
-	float playerBallCharge = 0;
+	float playerBallCharge = 0.0f;
 
 	if (controls.left)
 		acceleration.x -= playerBallControlsAccel;
 	if (controls.right)
 		acceleration.x += playerBallControlsAccel;
-	//if (controls.up)
+	if (controls.up)
 		acceleration.y += playerBallControlsAccel;
 	if (controls.down)
 		acceleration.y -= playerBallControlsAccel;

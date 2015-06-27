@@ -16,7 +16,7 @@ static const float staticBallDefaulRadius = 0.045f;
 
 void Field::spawnGameObjects()
 {
-	/*while (nextStaticBallsGroupSpawnDelta <= 0.0f)
+	while (nextStaticBallsGroupSpawnDelta <= 0.0f)
 	{
 		uint32 groupBallsCount = minStaticBallsGroupSize + Random::GetUint32(staticBallsGroupSizeDelta + 1);
 		for (uint32 i = 0; i < groupBallsCount; i++)
@@ -29,7 +29,7 @@ void Field::spawnGameObjects()
 		}
 		nextStaticBallsGroupSpawnDelta += Random::GetFloat(staticBallsGroupsMaxDelta);
 		nextStaticBallGroupCharge = nextStaticBallGroupCharge == Charge::Positive ? Charge::Negative : Charge::Positive;
-	}*/
+	}
 }
 
 void Field::Initialize()
@@ -37,8 +37,8 @@ void Field::Initialize()
 	staticBallsQueue.Clear();
 	nextStaticBallsGroupSpawnDelta = -1.0f;
 	nextStaticBallGroupCharge = Random::GetBool() ? Charge::Negative : Charge::Positive;
-	staticBallsQueue.PushBack(StaticBall(0.5f, 1.0f, 0.05f, Charge::Negative));
-	staticBallsQueue.PushBack(StaticBall(0.5f, -1.0f, 0.05f, Charge::Negative));
+	//staticBallsQueue.PushBack(StaticBall(0.5f, 1.0f, 0.05f, Charge::Negative));
+	//staticBallsQueue.PushBack(StaticBall(0.5f, -1.0f, 0.05f, Charge::Negative));
 	spawnGameObjects();
 }
 
@@ -46,8 +46,8 @@ float32x2 Field::GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float
 {
 	float32x2 force(0.0f, 0.0f);
 	uint32 staticBallsCount = staticBallsQueue.GetElementsCount();
-	for (uint32 i = 0; i < staticBallsCount; i++)
-		force += staticBallsQueue[i].GetForceAppliedToPlayerBall(playerBall, playerBallCharge);
+	//for (uint32 i = 0; i < staticBallsCount; i++)
+		//force += staticBallsQueue[i].GetForceAppliedToPlayerBall(playerBall, playerBallCharge);
 	return force;
 }
 

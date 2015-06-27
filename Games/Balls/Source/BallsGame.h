@@ -1,6 +1,6 @@
 #include <extypes.h>
 #include <extypes.vectors.h>
-#include <extypes.queue.h>
+#include <StaticCyclicQueue.h>
 
 #include <Render2D.h>
 
@@ -52,7 +52,7 @@ namespace BallsGame
 	private:
 		static const uint32 staticBallsLimit = 64;
 
-		Queue<StaticBall, staticBallsLimit> staticBallsQueue;
+		StaticCyclicQueue<StaticBall, staticBallsLimit> staticBallsQueue;
 
 		float nextStaticBallsGroupSpawnDelta;
 		Charge nextStaticBallGroupCharge;
@@ -71,7 +71,7 @@ namespace BallsGame
 	private:
 		static const uint32 blursLimit = 1024;
 
-		struct
+		/*struct
 		{
 			float32x2 position;
 			float radius, posDeltaCoef;
@@ -79,7 +79,15 @@ namespace BallsGame
 
 			//inline void set(float32x2 _position, float _radius, float _posDeltaCoef)
 			inline void move(float posDelta) { position.y += posDelta * posDeltaCoef; }
+		} blurs[blursLimit];*/
+
+		struct
+		{
+			float32x3 position;
+			float radius;
+			uint32 nextIdx;
 		} blurs[blursLimit];
+		uint32 firstBlurIdx;
 		uint32 blursCount;
 		float nextBlurSpawnDelta;
 

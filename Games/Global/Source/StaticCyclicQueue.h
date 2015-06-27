@@ -2,15 +2,15 @@
 
 #include "extypes.h"
 
-template <typename Type, uint32 size>
-class Queue
+template <typename Type, uintptr size>
+class StaticCyclicQueue
 {
 private:
 	Type buffer[size];
-	uint32 frontIdx, backIdx;
+	uintptr frontIdx, backIdx;
 
 public:
-	inline Queue() : frontIdx(0), backIdx(0) {}
+	inline StaticCyclicQueue() : frontIdx(0), backIdx(0) {}
 
 	inline void PushBack(const Type& value)
 	{
@@ -33,7 +33,7 @@ public:
 
 	inline Type& PeekFront() { return buffer[frontIdx]; }
 	inline Type& PeekBack() { return buffer[(backIdx + size - 1) % size]; }
-	inline Type& operator [](uint32 index) { return buffer[(frontIdx + index) % size]; }
+	inline Type& operator [](uintptr index) { return buffer[(frontIdx + index) % size]; }
 
 	inline uint32 GetElementsCount() { return (backIdx + size - frontIdx) % size; }
 	inline bool IsEmpty() { return frontIdx == backIdx; }

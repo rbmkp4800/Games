@@ -67,8 +67,6 @@ float32x2 StaticBall::GetForceAppliedToPlayerBall(const PlayerBall& playerBall, 
 void StaticBall::DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge)
 {
 	using namespace Render2D;
-	if (playerBallCharge == 0.0f)
-		return;
 
 	float thisBallCharge = 0.0f;
 	switch (charge)
@@ -78,14 +76,17 @@ void StaticBall::DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall,
 	default: return;
 	}
 
-	float opacity = saturate((staticBallDistanceForceOpac0 - length(position - playerBall.position)) /
-		(staticBallDistanceForceOpac0 - staticBallDistanceForceOpac1));
+	float playerBallDistance = length(position - playerBall.position);
+	//float opacity = saturate(lincoef(staticBallDistanceForceOpac0, staticBallDistanceForceOpac1, length(position - playerBall.position)));
+	float opacity = lincoefsatur(0.8f, 0.3f, playerBallDistance);
 	if (opacity >= opacityThreshold)
 	{
 		uint32 color = thisBallCharge * playerBallCharge < 0.0f ? staticBallNegativeColor : staticBallPositiveColor;
 		coloru32 colorCenter(color, opacity), colorSide(color, uint8(0));
-		batch->PushLineAligned(position, playerBall.position, 0.05f, colorSide, colorCenter, LineGradientType::LeftToRight);
-		batch->PushLineAligned(position, playerBall.position, -0.05f, colorSide, colorCenter, LineGradientType::LeftToRight);
+		//batch->PushLine(position, playerBall.position, 0.03f, colorCenter);
+		float width = lerp(0.01f, 0.08f, lincoefsatur(0.6f, 0.1f, playerBallDistance));
+		batch->PushLineAligned(position, playerBall.position, width, colorSide, colorCenter, LineGradientType::LeftToRight);
+		batch->PushLineAligned(position, playerBall.position, -width, colorSide, colorCenter, LineGradientType::LeftToRight);
 	}
 }
 
@@ -100,7 +101,7 @@ void StaticBall::Draw(Render2D::Batch* batch)
 	case Charge::Negative: color = staticBallNegativeColor; break;
 	default: color = staticBallNeutralColor; break;
 	}
-	batch->PushCircleAA(position, radius * 0.8f, color);
+	batch->PushCircleAA(position, radius, color);
+	//batch->PushCircleAA(position, radius * 0.8f, color);
 	batch->PushCircleAA(position, radius, coloru32(colors::white), 0.89f);
-	//batch->PushCircleAA(position, radius, color);
 }

@@ -33,17 +33,17 @@ uintptr elemcntof(type(&)[size]) { return size; }
 template <typename type>
 inline type absval(type val) { return val >= type(0) ? val : -val; }
 
-template <typename type1, typename type2>
-inline type1 minval(type1 val1, type2 val2) { return val1 < val2 ? val1 : val2; }
+template <typename type>
+inline type minval(type val1, type val2) { return val1 < val2 ? val1 : val2; }
 
-template <typename type1, typename type2>
-inline type1 maxval(type1 val1, type2 val2) { return val1 > val2 ? val1 : val2; }
+template <typename type>
+inline type maxval(type val1, type val2) { return val1 > val2 ? val1 : val2; }
 
-template <typename type1, typename type2, typename type3>
-inline type1 minval(type1 val1, type2 val2, type3 val3) { return minval(val1, minval(val2, val3)); }
+template <typename type>
+inline type minval(type val1, type val2, type val3) { return minval(val1, minval(val2, val3)); }
 
-template <typename type1, typename type2, typename type3>
-inline type1 maxval(type1 val1, type2 val2, type3 val3) { return maxval(val1, maxval(val2, val3)); }
+template <typename type>
+inline type maxval(type val1, type val2, type val3) { return maxval(val1, maxval(val2, val3)); }
 
 template <typename type>
 inline type clamp(type val, type _min, type _max)
@@ -54,6 +54,12 @@ inline type clamp(type val, type _min, type _max)
 }
 template <typename type>
 inline type saturate(type val) { return clamp(val, type(0), type(1)); }
+template <typename vectorType, typename coefType>
+inline vectorType lerp(const vectorType& x, const vectorType& y, coefType coef) { return x + coef * (y - x); }
+template <typename type>
+inline type lincoef(type x, type y, type c) { return (x - c) / (x - y); }
+template <typename type>
+inline type lincoefsatur(type x, type y, type c) { return saturate(lincoef(x, y, c)); }
 template <typename type>
 inline type sqrval(type val) { return val * val; }
 template <typename type, typename _type>

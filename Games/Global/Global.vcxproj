@@ -64,12 +64,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\BitField.h" />
     <ClInclude Include="Source\extypes.h" />
     <ClInclude Include="Source\extypes.matrix3x2.h" />
     <ClInclude Include="Source\extypes.matrix4x4.h" />
-    <ClInclude Include="Source\extypes.queue.h" />
+    <ClInclude Include="Source\StaticCyclicQueue.h" />
     <ClInclude Include="Source\extypes.vectors.h" />
     <ClInclude Include="Source\extypes.vectors.math.h" />
+    <ClInclude Include="Source\StaticList.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

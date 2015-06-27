@@ -6,11 +6,17 @@ using namespace BallsGame;
 using namespace Render2D;
 
 static const float blursSpawnDistance = 2.0f;
+static const float blursDeleteDistance = -2.0f;
 
 void Background::spawnBlurs()
 {
 	while (nextBlurSpawnDelta <= 0.0f)
 	{
+		float depth = Random::GetFloat(1.0f);
+		for ()
+		float32x3 position(;
+
+
 		float radius = 0.15f + Random::GetFloat(0.3f);
 		blurs[blursCount].position.set(Random::GetFloat(radius * 3.0f + 1.0f) - radius * 1.5f,
 			nextBlurSpawnDelta + blursSpawnDistance);
@@ -43,7 +49,7 @@ void Background::UpdateAndDraw(float posDelta, float cameraDelta, Batch* batch)
 		//batch->PushEllipse(circleRect, innerColor);
 		//batch->PushEllipse(circleRect, innerColor, -0.0f, 0.4f);
 		//batch->PushGradientEllipse(circleRect, innerColor, outerColor, 0.4f);
-		batch->PushEllipse(circleRect, innerColor, -0.0f, 0.8f);
-		batch->PushGradientEllipse(circleRect, innerColor, outerColor, 0.8f);
+		batch->PushEllipse(circleRect, innerColor, -0.0f, 0.6f);
+		batch->PushGradientEllipse(circleRect, innerColor, outerColor, 0.6f);
 	}
 }
