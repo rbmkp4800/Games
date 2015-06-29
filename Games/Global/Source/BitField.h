@@ -34,7 +34,7 @@ public:
 				}
 				for (uint8 j = 0; j < 8; j++)
 				{
-					if (val & 1 == 0)
+					if ((val & 1) == 0)
 						return i + j;
 					val >>= 1;
 				}
@@ -43,6 +43,7 @@ public:
 		}
 		return uint32(-1);
 	}
+
 	inline void SetBitTo1(uint32 idx)
 	{
 		buffer[idx / 32] |= 1 << (idx % 32);

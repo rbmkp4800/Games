@@ -62,30 +62,15 @@ template <typename type>
 inline type lincoefsatur(type x, type y, type c) { return saturate(lincoef(x, y, c)); }
 template <typename type>
 inline type sqrval(type val) { return val * val; }
-template <typename type, typename _type>
-inline type intdivceil(type val, _type div) { return (type) ((val - 1) / div + 1); }
-template <typename type, typename _type>
-inline type alignval(type val, _type mod) { return val / mod * mod; }
+template <typename type>
+inline type intdivceil(type val, type div) { return (val - 1) / div + 1; }
+template <typename type>
+inline type alignval(type val, type mod) { return val / mod * mod; }
 
 #define elemcntof_constexpr(arr) (sizeof(arr) / sizeof(*arr))
 #define minval_constexpr(val1, val2) ((val1) < (val2) ? (val1) : (val2))
 #define maxval_constexpr(val1, val2) ((val1) > (val2) ? (val1) : (val2))
-
-#ifndef UINT8_MAX
-#define UINT8_MAX	0xff
-#endif
-
-#ifndef UINT16_MAX
-#define UINT16_MAX	0xffff
-#endif
-
-#ifndef UINT32_MAX
-#define UINT32_MAX	0xfffffffful
-#endif
-
-#ifndef UINT64_MAX
-#define UINT64_MAX	0xffffffffffffffffull
-#endif
+#define intdivceil_constexpr(val, div) (((val) - 1) / (div) + 1)
 
 #define PI_def 3.141592654f
 

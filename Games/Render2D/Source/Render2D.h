@@ -53,6 +53,23 @@ namespace Render2D
 		}
 	};
 
+	inline coloru32 lerp(const coloru32& a, const coloru32& b, float coef)
+	{
+		return coloru32(
+			uint8(::lerp(float(a.r), float(b.r), coef)),
+			uint8(::lerp(float(a.g), float(b.g), coef)),
+			uint8(::lerp(float(a.b), float(b.b), coef)),
+			uint8(::lerp(float(a.a), float(b.a), coef)));
+	}
+	inline coloru32 lerp_clamp(const coloru32& a, const coloru32& b, float coef)
+	{
+		return coloru32(
+			uint8(clamp(::lerp(float(a.r), float(b.r), coef), 1.0f, 255.0f)),
+			uint8(clamp(::lerp(float(a.g), float(b.g), coef), 1.0f, 255.0f)),
+			uint8(clamp(::lerp(float(a.b), float(b.b), coef), 1.0f, 255.0f)),
+			uint8(clamp(::lerp(float(a.a), float(b.a), coef), 1.0f, 255.0f)));
+	}
+
 	struct colors
 	{
 		static const uint32
@@ -301,11 +318,11 @@ namespace Render2D
 
 	//-----------------------------------Batches-------------------------------------//
 
-	enum class LineGradientType : uint8
+	enum class GradientType : uint8
 	{
 		None = 0,
-		LeftToRight = 1,
-		BeginToEnd = 2,
+		Horizontal = 1,
+		Vertical = 2,
 	};
 
 	inline rectf32 circle(float32x2 center, float radius)
@@ -427,6 +444,52 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
+		inline void PushGradientRect(const rectf32& rect, coloru32 color1, coloru32 color2, GradientType gradientType)
+		{
+			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
+			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
+			if (quadIndexationEnabled)
+			{
+				switch (gradientType)
+				{
+				case GradientType::Horizontal:
+					vb[0].set(float32x2(rect.left, rect.top), color1);
+					vb[1].set(float32x2(rect.right, rect.top), color2);
+					vb[2].set(float32x2(rect.right, rect.bottom), color2);
+					vb[3].set(float32x2(rect.left, rect.bottom), color1);
+					break;
+				case GradientType::Vertical:
+					vb[0].set(float32x2(rect.left, rect.top), color2);
+					vb[1].set(float32x2(rect.right, rect.top), color2);
+					vb[2].set(float32x2(rect.right, rect.bottom), color1);
+					vb[3].set(float32x2(rect.left, rect.bottom), color1);
+					break;
+				}
+				vertexCount += 4;
+			}
+			else
+			{
+				switch (gradientType)
+				{
+				case GradientType::Horizontal:
+					vb[0].set(float32x2(rect.left, rect.top), color1);		//0
+					vb[3].set(float32x2(rect.left, rect.bottom), color1);	//3
+					vb[1].set(float32x2(rect.right, rect.top), color2);		//1
+					vb[1].set(float32x2(rect.right, rect.top), color2);		//1
+					vb[3].set(float32x2(rect.left, rect.bottom), color1);	//3
+					vb[2].set(float32x2(rect.right, rect.bottom), color2);	//2
+					break;
+				case GradientType::Vertical:
+					vb[0].set(float32x2(rect.left, rect.top), color2);		//0
+					vb[3].set(float32x2(rect.left, rect.bottom), color1);	//3
+					vb[1].set(float32x2(rect.right, rect.top), color2);		//1
+					vb[1].set(float32x2(rect.right, rect.top), color2);		//1
+					vb[3].set(float32x2(rect.left, rect.bottom), color1);	//3
+					vb[2].set(float32x2(rect.right, rect.bottom), color1);	//2
+					break;
+				}
+			}
+		}
 		inline void PushGradientEllipse(const rectf32& rect, coloru32 innerColor, coloru32 outerColor, float innerRadius = -0.0f, float outerRadius = 1.0f)
 		{
 			checkState(Effect::Ellipse, 4, 6, sizeof(VertexEllipse));
@@ -472,7 +535,7 @@ namespace Render2D
 			}
 			PushGradientEllipse(rect, color, tansparentColor, 1.0f - halfPixelByRadius * 2.0f, 1.0f);
 		}
-		inline void PushLineAligned(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, LineGradientType gradientType)
+		inline void PushLineAligned(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, GradientType gradientType)
 		{
 			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
@@ -481,13 +544,13 @@ namespace Render2D
 			{
 				switch (gradientType)
 				{
-				case LineGradientType::LeftToRight:
+				case GradientType::Horizontal:
 					vb[0].set(begin + v, color1);
 					vb[1].set(end + v, color1);
 					vb[2].set(end, color2);
 					vb[3].set(begin, color2);
 					break;
-				case LineGradientType::BeginToEnd:
+				case GradientType::Vertical:
 					vb[0].set(begin + v, color1);
 					vb[1].set(end + v, color2);
 					vb[2].set(end, color2);
@@ -500,7 +563,7 @@ namespace Render2D
 			{
 				switch (gradientType)
 				{
-				case LineGradientType::LeftToRight:
+				case GradientType::Horizontal:
 					vb[0].set(begin + v, color1);
 					vb[1].set(begin, color2);
 					vb[2].set(end + v, color1);
@@ -509,7 +572,7 @@ namespace Render2D
 					vb[5].set(end, color2);
 
 					break;
-				case LineGradientType::BeginToEnd:
+				case GradientType::Vertical:
 					vb[0].set(begin + v, color1);
 					vb[1].set(begin, color1);
 					vb[2].set(end + v, color2);
@@ -545,7 +608,7 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushLine(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, LineGradientType gradientType)
+		inline void PushLine(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, GradientType gradientType)
 		{
 			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
@@ -554,13 +617,13 @@ namespace Render2D
 			{
 				switch (gradientType)
 				{
-				case LineGradientType::LeftToRight:
+				case GradientType::Horizontal:
 					vb[0].set(begin + v, color1);
 					vb[1].set(end + v, color1);
 					vb[2].set(end - v, color2);
 					vb[3].set(begin - v, color2);
 					break;
-				case LineGradientType::BeginToEnd:
+				case GradientType::Vertical:
 					vb[0].set(begin + v, color1);
 					vb[1].set(end + v, color2);
 					vb[2].set(end - v, color2);
@@ -573,7 +636,7 @@ namespace Render2D
 			{
 				switch (gradientType)
 				{
-				case LineGradientType::LeftToRight:
+				case GradientType::Horizontal:
 					vb[0].set(begin + v, color1);
 					vb[1].set(begin - v, color2);
 					vb[2].set(end + v, color1);
@@ -582,7 +645,7 @@ namespace Render2D
 					vb[5].set(end - v, color2);
 
 					break;
-				case LineGradientType::BeginToEnd:
+				case GradientType::Vertical:
 					vb[0].set(begin + v, color1);
 					vb[1].set(begin - v, color1);
 					vb[2].set(end + v, color2);

@@ -118,7 +118,8 @@ void Game::Update(float timeDelta)
 
 	device.SetTransform(matrix3x2::identity());
 	batch.PushGradientEllipse(rectf32(-2.5f, -2.2f, 2.5f, 2.0f),
-		colors::transparent, coloru32(colors::black), 0.45f, 0.8f);
+		colors::transparent, coloru32(colors::black), 0.45f, 0.75f);
+	batch.PushGradientRect(rectf32(-1.0f, -1.0f, 1.0f, -0.85f), coloru32(0, uint8(0)), coloru32(0, uint8(196)), GradientType::Vertical);
 	batch.Flush();
 
 	swapChain.Present();

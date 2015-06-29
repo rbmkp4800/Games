@@ -85,8 +85,8 @@ void StaticBall::DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall,
 		coloru32 colorCenter(color, opacity), colorSide(color, uint8(0));
 		//batch->PushLine(position, playerBall.position, 0.03f, colorCenter);
 		float width = lerp(0.01f, 0.08f, lincoefsatur(0.6f, 0.1f, playerBallDistance));
-		batch->PushLineAligned(position, playerBall.position, width, colorSide, colorCenter, LineGradientType::LeftToRight);
-		batch->PushLineAligned(position, playerBall.position, -width, colorSide, colorCenter, LineGradientType::LeftToRight);
+		batch->PushLineAligned(position, playerBall.position, width, colorSide, colorCenter, GradientType::Horizontal);
+		batch->PushLineAligned(position, playerBall.position, -width, colorSide, colorCenter, GradientType::Horizontal);
 	}
 }
 
@@ -101,7 +101,7 @@ void StaticBall::Draw(Render2D::Batch* batch)
 	case Charge::Negative: color = staticBallNegativeColor; break;
 	default: color = staticBallNeutralColor; break;
 	}
-	batch->PushCircleAA(position, radius, color);
-	//batch->PushCircleAA(position, radius * 0.8f, color);
+	//batch->PushCircleAA(position, radius, color);
+	batch->PushCircleAA(position, radius * 0.8f, color);
 	batch->PushCircleAA(position, radius, coloru32(colors::white), 0.89f);
 }

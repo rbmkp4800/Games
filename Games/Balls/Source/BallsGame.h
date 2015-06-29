@@ -1,6 +1,7 @@
 #include <extypes.h>
 #include <extypes.vectors.h>
 #include <StaticCyclicQueue.h>
+#include <StaticList.h>
 
 #include <Render2D.h>
 
@@ -71,33 +72,28 @@ namespace BallsGame
 	private:
 		static const uint32 blursLimit = 1024;
 
-		/*struct
+		struct BlurDesc
 		{
 			float32x2 position;
-			float radius, posDeltaCoef;
-			uint32 color;
+			float depth, radius;
+		};
+		friend bool operator > (const BlurDesc& a, const BlurDesc& b);
 
-			//inline void set(float32x2 _position, float _radius, float _posDeltaCoef)
-			inline void move(float posDelta) { position.y += posDelta * posDeltaCoef; }
-		} blurs[blursLimit];*/
-
-		struct
-		{
-			float32x3 position;
-			float radius;
-			uint32 nextIdx;
-		} blurs[blursLimit];
-		uint32 firstBlurIdx;
-		uint32 blursCount;
+		StaticOrderedList<BlurDesc, blursLimit> blursList;
 		float nextBlurSpawnDelta;
 
 		void spawnBlurs();
 
 	public:
-		inline Background() : blursCount(0), nextBlurSpawnDelta(0) {}
+		inline Background() : nextBlurSpawnDelta(0.0f) {}
 		void Initialize();
 		void UpdateAndDraw(float posDelta, float cameraDelta, Render2D::Batch* batch);
 	};
+
+	inline bool operator > (const Background::BlurDesc& a, const Background::BlurDesc& b)
+	{
+		return a.depth > b.depth;
+	}
 
 	enum class PlayerControl
 	{
