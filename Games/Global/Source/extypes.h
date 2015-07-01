@@ -57,9 +57,9 @@ inline type saturate(type val) { return clamp(val, type(0), type(1)); }
 template <typename vectorType, typename coefType>
 inline vectorType lerp(const vectorType& x, const vectorType& y, coefType coef) { return x + coef * (y - x); }
 template <typename type>
-inline type lincoef(type x, type y, type c) { return (x - c) / (x - y); }
+inline type lincoef(type a, type b, type coef) { return (a - coef) / (a - b); }
 template <typename type>
-inline type lincoefsatur(type x, type y, type c) { return saturate(lincoef(x, y, c)); }
+inline type lincoefsatur(type a, type b, type coef) { return saturate(lincoef(a, b, coef)); }
 template <typename type>
 inline type sqrval(type val) { return val * val; }
 template <typename type>

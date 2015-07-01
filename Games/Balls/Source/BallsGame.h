@@ -7,7 +7,7 @@
 
 namespace BallsGame
 {
-	static const float hellDistance = 2.0f;
+	static const float hellDistance = -2.0f;
 
 	enum class Charge : uint8
 	{
@@ -42,7 +42,8 @@ namespace BallsGame
 		StaticBall() = default;
 		inline StaticBall(float x, float y, float _radius, Charge _charge) : radius(_radius), charge(_charge) { position.set(x, y); }
 
-		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& translation);
+		float GetPlayerBallCollisionDistance(PlayerBall& playerBall, const float32x2& translation, float translationLength);
+		void CollideWithPlayerBall(float collisionDistance, PlayerBall& playerBall, float32x2& translation, float translationLength);
 		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float playerBallCharge);
 		void DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge);
 		void Draw(Render2D::Batch* batch);
@@ -52,7 +53,6 @@ namespace BallsGame
 	{
 	private:
 		static const uint32 staticBallsLimit = 64;
-
 		StaticCyclicQueue<StaticBall, staticBallsLimit> staticBallsQueue;
 
 		float nextStaticBallsGroupSpawnDelta;
@@ -63,25 +63,22 @@ namespace BallsGame
 	public:
 		void Initialize();
 		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float playerBallCharge);
-		void CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2 translation);
+		void CollideWithPlayerBall(PlayerBall& playerBall, float32x2 translation);
 		void UpdateAndDraw(float posDelta, Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge);
 	};
 
 	class Background
 	{
 	private:
-		static const uint32 blursLimit = 1024;
-
+		static const uint32 blursLimit = 64;
 		struct BlurDesc
 		{
 			float32x2 position;
 			float depth, radius;
 		};
 		friend bool operator > (const BlurDesc& a, const BlurDesc& b);
-
 		StaticOrderedList<BlurDesc, blursLimit> blursList;
 		float nextBlurSpawnDelta;
-
 		void spawnBlurs();
 
 	public:
@@ -89,11 +86,30 @@ namespace BallsGame
 		void Initialize();
 		void UpdateAndDraw(float posDelta, float cameraDelta, Render2D::Batch* batch);
 	};
-
 	inline bool operator > (const Background::BlurDesc& a, const Background::BlurDesc& b)
 	{
 		return a.depth > b.depth;
 	}
+
+	class Hell
+	{
+	private:
+		static const uint32 blursLimit = 64;
+		struct BlurDesc
+		{
+			float32x2 position;
+			float radius, lifeTime;
+		};
+		StaticCyclicQueue<BlurDesc, blursLimit> blursQueue;
+		float nextBlurSpawnDelta;
+		void spawnBlurs();
+
+		float distance;
+
+	public:
+		void Initialize();
+		void UpdateAndDraw(float posDelta, float timeDelta, Render2D::Batch* batch);
+	};
 
 	enum class PlayerControl
 	{
@@ -111,7 +127,9 @@ namespace BallsGame
 	private:
 		Field field;
 		Background background;
+		Hell hell;
 		PlayerBall playerBall;
+
 		struct
 		{
 			bool left, right, up, down, positiveCharge, negativeCharge;
@@ -132,3 +150,5 @@ namespace BallsGame
 		void Restart();
 	};
 }
+
+extern uint32 frameid;

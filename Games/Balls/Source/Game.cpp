@@ -16,7 +16,7 @@ static const float playerBallControlsAccel = 2.0f;
 static const float playerBallControlsDefaultCharge = 0.1f;
 static const float cameraDeltaDecreaseExponentCoef = 0.2f;
 static const float cameraDeltaCoef = 0.5f;
-static const float gravityAccel = 0.0f; //-0.4f;
+static const float gravityAccel = -0.4f;
 
 bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 {
@@ -29,6 +29,7 @@ bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 	Random::Seed(2);
 	field.Initialize();
 	background.Initialize();
+	hell.Initialize();
 
 	outputSize.set(outputSizeX, outputSizeY);
 	aspect = float(outputSizeX) / float(outputSizeY);
@@ -57,6 +58,8 @@ inline matrix3x2 translationScaleTranslation(float xtrans1, float ytrans1, float
 
 void Game::Update(float timeDelta)
 {
+	frameid++;
+
 	float32x2 acceleration(0.0f, gravityAccel);
 	float playerBallCharge = 0.0f;
 
@@ -77,23 +80,10 @@ void Game::Update(float timeDelta)
 
 	float32x2 translation = (playerBall.speed + acceleration * timeDelta / 2.0f) * timeDelta;
 	playerBall.speed += acceleration * timeDelta;
-	field.CollideWithPlayerBall(timeDelta, playerBall, translation);
+	field.CollideWithPlayerBall(playerBall, translation);
 	float posDelta = playerBall.position.y;
 	playerBall.position.y = 0.0f;
 	globalPosition += float64(posDelta);
-
-	if (playerBall.position.x < playerBall.radius)
-	{
-		if (playerBall.speed.x < 0.0f)
-			playerBall.speed.x = -playerBall.speed.x;
-		playerBall.position.x = playerBall.radius + playerBall.radius - playerBall.position.x;
-	}
-	if (playerBall.position.x > 1.0f - playerBall.radius)
-	{
-		if (playerBall.speed.x > 0.0f)
-			playerBall.speed.x = -playerBall.speed.x;
-		playerBall.position.x = 2.0f - playerBall.radius - playerBall.radius - playerBall.position.x;
-	}
 
 	float cameraDeltaDecreaseCoef = powf(cameraDeltaDecreaseExponentCoef, timeDelta);
 	float cameraFullDelta = cameraDeltaCoef * playerBall.speed.y;
@@ -104,15 +94,14 @@ void Game::Update(float timeDelta)
 
 	device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f, 2.0f * aspect,
 		0.0f, playerBallDefaultOutputVerticalPos / aspect), 1.0f / float(outputSize.x));
-	background.UpdateAndDraw(-posDelta, cameraDelta, &batch);
-	batch.Flush();
 
-	device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f, 2.0f * aspect,
-		0.0f, playerBallDefaultOutputVerticalPos / aspect/* + cameraDelta*/), 1.0f / float(outputSize.x));
+	background.UpdateAndDraw(-posDelta, cameraDelta, &batch);
 	field.UpdateAndDraw(-posDelta, &batch, playerBall, playerBallCharge);
+	hell.UpdateAndDraw(-posDelta, timeDelta, &batch);
 
 	batch.PushCircleAA(playerBall.position, playerBall.radius * 0.85f, colors::white);
 	batch.PushCircleAA(playerBall.position, playerBall.radius, colors::white, 0.92f);
+	//batch.PushLine(playerBall.position, playerBall.position + playerBall.speed, 0.005f, colors::red);
 	//batch.PushCircleAA(playerBall.position, playerBall.radius, colors::white);
 	batch.Flush();
 
@@ -149,3 +138,5 @@ void Game::SetPlayerControlState(PlayerControl playerControl, bool state)
 		break;
 	}
 }
+
+uint32 frameid = 0;

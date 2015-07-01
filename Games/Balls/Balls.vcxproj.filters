@@ -7,6 +7,7 @@
     <ClCompile Include="Source\Background.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\Random.cpp" />
+    <ClCompile Include="Source\Hell.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\BallsGame.h" />

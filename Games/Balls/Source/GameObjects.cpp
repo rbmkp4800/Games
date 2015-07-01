@@ -14,36 +14,32 @@ static const uint32 staticBallNegativeColor = Render2D::colors::lightSalmon;
 static const float staticBallDistanceForceOpac0 = 0.8f;
 static const float staticBallDistanceForceOpac1 = 0.1f;
 
-void StaticBall::CollideWithPlayerBall(float timeDelta, PlayerBall& playerBall, float32x2& translation)
+float StaticBall::GetPlayerBallCollisionDistance(PlayerBall& playerBall, const float32x2& translation, float translationLength)
 {
-	if (!translation.any())
-		return;
+#pragma message("make constexpr nan")
+#define nan 1000.0f
 
 	float32x2 distanceVector = position - playerBall.position;
 	float distance = length(distanceVector);
-	float translationLength = length(translation);
 	float minDistance = playerBall.radius + radius;
 	if (distance > minDistance + translationLength)
-		return;
-	if (distance < minDistance)
-	{
-		distanceVector *= minDistance / distance;
-		playerBall.position = position - distanceVector;
-		distance = minDistance;
-	}
-
+		return nan;
 	float distTransAngleCos = dot(distanceVector, translation) / (distance * translationLength);
 	float discriminant = sqrval(distTransAngleCos) + sqrval(minDistance / distance) - 1.0f;
 	if (discriminant < 0.0f)
-		return;
-	float fallingDistance = distance * (distTransAngleCos - sqrtf(discriminant));
-	if (fallingDistance <= 0.0f || fallingDistance > translationLength)
-		return;
-
-	float32x2 fallVector = (translation / translationLength) * fallingDistance;
-	float32x2 normalVector = fallVector - distanceVector;
-	float32x2 reflectionVector = (fallVector - normalVector * dot(normalVector, fallVector) / dot(normalVector, normalVector) * 2.0f) / fallingDistance;
-	translation = reflectionVector * (translationLength - fallingDistance);
+		return nan;
+	float collisionDistance = distance * (distTransAngleCos - sqrtf(discriminant));
+	if (collisionDistance < 0.0f)
+		return nan;
+	return collisionDistance;
+#undef nan
+}
+void StaticBall::CollideWithPlayerBall(float collisionDistance, PlayerBall& playerBall, float32x2& translation, float translationLength)
+{
+	float32x2 fallVector = translation * (collisionDistance / translationLength);
+	float32x2 normalVector = fallVector - (position - playerBall.position);
+	float32x2 reflectionVector = (translation - proj(translation, normalVector) * 2.0f) / translationLength;
+	translation = reflectionVector * (translationLength - collisionDistance);
 	playerBall.position += fallVector;
 	playerBall.speed = reflectionVector * length(playerBall.speed) * staticBallBounceSpeedReduceCoef;
 }

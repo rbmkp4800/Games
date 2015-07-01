@@ -14,11 +14,11 @@ struct varx2
 	inline varx2(type _x, type _y) : x(_x), y(_y) {}
 	inline void set(type _x, type _y) { x = _x; y = _y; }
 
-	inline float aspect() { return (float) x / (float) y; }
-	inline type mul() { return x * y; }
-	inline type sum() { return x + y; }
-	inline bool any() { return x || y ? true : false; }
-	inline bool all() { return x && y ? true : false; }
+	inline float aspect() const { return (float) x / (float) y; }
+	inline type mul() const { return x * y; }
+	inline type sum() const { return x + y; }
+	inline bool any() const { return x || y ? true : false; }
+	inline bool all() const { return x && y ? true : false; }
 
 	template <typename _type> inline bool operator == (const varx2<_type>& val) const
 	{
@@ -330,6 +330,13 @@ inline type cross(const varx2<type>& a, const varx2<type>& b)
 {
 	return a.x * b.y - a.y * b.x;
 }
+
+template <typename type>
+inline type proj(const type& a, const type& b)
+{
+	return b * (dot(a, b) / dot(b, b));
+}
+
 template <typename type>
 inline varx2<type> normal(const varx2<type>& v)
 {

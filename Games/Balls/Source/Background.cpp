@@ -5,7 +5,7 @@
 using namespace BallsGame;
 using namespace Render2D;
 
-static const float blursSpawnDistance = 2.0f;
+static const float blursSpawnDistance = 1.5f;
 
 void Background::spawnBlurs()
 {

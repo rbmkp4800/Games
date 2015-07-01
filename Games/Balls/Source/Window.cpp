@@ -110,8 +110,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdS
 		{
 			uint64 tick = 0;
 			QueryPerformanceCounter(PLARGE_INTEGER(&tick));
-			//game.Update(float(tick - lastTick) / counterFrequency);
-			game.Update(0.016f);
+			game.Update(float(tick - lastTick) / counterFrequency);
+			//game.Update(0.016f);
 			//game.Update(float((rand() % 40) + 1) / 1000.0f);
 			lastTick = tick;
 		}

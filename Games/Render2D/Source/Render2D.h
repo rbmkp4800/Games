@@ -98,7 +98,8 @@ namespace Render2D
 			lightSkyBlue = 0xffface87,
 			skyBlue = 0xffebce87,
 			lightGray = 0xffc0c0c0,
-			darkGray = 0xff3f3f3f;
+			darkGray = 0xff3f3f3f,
+			lightYellow = 0xff7fffff;
 	};
 
 	//--------------------------------Interfaces----------------------------------//
