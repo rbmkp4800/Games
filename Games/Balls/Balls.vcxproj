@@ -100,12 +100,6 @@
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="Textures\ballMask.png" />
-    <Image Include="Textures\bgMask.png" />
-    <Image Include="Textures\blueWave.png" />
-    <Image Include="Textures\redWave.png" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

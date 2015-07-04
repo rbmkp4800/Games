@@ -75,6 +75,8 @@ namespace BallsGame
 		{
 			float32x2 position;
 			float depth, radius;
+			BlurDesc() = default;
+			inline BlurDesc(float32x2 _position, float _depth, float _radius) : position(_position), depth(_depth), radius(_radius) {}
 		};
 		friend bool operator > (const BlurDesc& a, const BlurDesc& b);
 		StaticOrderedList<BlurDesc, blursLimit> blursList;
@@ -99,6 +101,8 @@ namespace BallsGame
 		{
 			float32x2 position;
 			float radius, lifeTime;
+			BlurDesc() = default;
+			inline BlurDesc(float32x2 _position, float _radius, float _lifeTime) : position(_position), radius(_radius), lifeTime(_lifeTime) {}
 		};
 		StaticCyclicQueue<BlurDesc, blursLimit> blursQueue;
 		float nextBlurSpawnDelta;

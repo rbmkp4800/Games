@@ -113,7 +113,7 @@ void Field::UpdateAndDraw(float posDelta, Render2D::Batch* batch, const PlayerBa
 	for (uint32 i = 0; i < staticBallsCount; i++)
 		staticBallsQueue[i].Move(posDelta);
 
-	while (staticBallsQueue.PeekFront().GetPosition().y < hellDistance)
+	while ((!staticBallsQueue.IsEmpty()) && staticBallsQueue.PeekFront().GetPosition().y < hellDistance)
 		staticBallsQueue.PopFront();
 
 	nextStaticBallsGroupSpawnDelta += posDelta;

@@ -12,13 +12,8 @@ void Hell::spawnBlurs()
 		if (blursQueue.IsFull())
 			return;
 
-		BlurDesc desc;
-		desc.position.set(Random::GetFloat(1.0f), 0.0f);
-		desc.radius = 0.1f + Random::GetFloat(0.2f);
-		desc.lifeTime = 0.8f;
-		blursQueue.PushBack(desc);
-
-		nextBlurSpawnDelta -= 0.03f + Random::GetFloat(0.05f);
+		blursQueue.PushBack(BlurDesc(float32x2(Random::GetFloat(1.0f), 0.0f), 0.1f + Random::GetFloat(0.2f), 0.8f));
+		nextBlurSpawnDelta -= 0.02f + Random::GetFloat(0.05f);
 	}
 }
 
@@ -54,9 +49,8 @@ void Hell::UpdateAndDraw(float posDelta, float timeDelta, Render2D::Batch* batch
 		BlurDesc& desc = blursQueue[blurIndex];
 		desc.position.y += timeDelta;
 		desc.lifeTime -= timeDelta;
-		rectf32 rect = circle(float32x2(desc.position.x, desc.position.y + distance - 0.15f), desc.radius * (desc.lifeTime + 0.2f));
+		rectf32 rect = circle(float32x2(desc.position.x, desc.position.y + distance - 0.15f), desc.radius * (desc.lifeTime + 0.4f));
 		coloru32 color(colors::lightYellow, desc.lifeTime);
-		batch->PushEllipse(rect, color, -0.0f, 0.5f);
-		batch->PushGradientEllipse(rect, color, coloru32(colors::lightYellow, uint8(0)), 0.5f);
+		batch->PushGradientEllipse(rect, color, coloru32(colors::lightYellow, uint8(0)));
 	}
 }

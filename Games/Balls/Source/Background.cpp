@@ -11,15 +11,11 @@ void Background::spawnBlurs()
 {
 	while (nextBlurSpawnDelta <= 0.0f)
 	{
-		float depth = Random::GetFloat(1.0f);
-		float radius = (0.15f + Random::GetFloat(0.8f)) / (depth * 6.0f + 1.0f);
+		float depth = 0.3f + Random::GetFloat(0.7f);
+		float radius = (0.3f + Random::GetFloat(0.8f)) / (depth * 5.0f + 1.0f);
 
-		BlurDesc desc;
-		desc.position.set(Random::GetFloat(radius * 3.0f + 1.5f) - radius * 1.5f, nextBlurSpawnDelta + blursSpawnDistance);
-		desc.depth = depth;
-		desc.radius = radius;
-
-		blursList.Insert(desc);
+		blursList.Insert(BlurDesc(float32x2(Random::GetFloat(radius * 3.0f + 1.5f) - radius * 1.5f,
+			nextBlurSpawnDelta + blursSpawnDistance), depth, radius));
 		nextBlurSpawnDelta += Random::GetFloat(0.3f);
 	}
 }
@@ -41,7 +37,7 @@ void Background::UpdateAndDraw(float posDelta, float cameraDelta, Batch* batch)
 	while (blursList.EnumIsValid(enumerator))
 	{
 		BlurDesc& desc = blursList.GetElement(enumerator);
-		if (desc.position.y > blursSpawnDistance || desc.position.y < -blursSpawnDistance)
+		if (desc.position.y < hellDistance)
 		{
 			blursList.Delete(enumerator);
 			continue;
