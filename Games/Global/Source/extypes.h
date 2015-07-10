@@ -27,51 +27,42 @@ void xorswap(type& val1, type& val2)
 	val2 ^= val1;
 	val1 ^= val2;
 }
-template <typename type, uintptr size>
-uintptr elemcntof(type(&)[size]) { return size; }
+
+template <typename type, uintptr size> constexpr uintptr elemcntof(type(&)[size]) { return size; }
 
 template <typename type>
-inline type absval(type val) { return val >= type(0) ? val : -val; }
-
-template <typename type>
-inline type minval(type val1, type val2) { return val1 < val2 ? val1 : val2; }
-
-template <typename type>
-inline type maxval(type val1, type val2) { return val1 > val2 ? val1 : val2; }
-
-template <typename type>
-inline type minval(type val1, type val2, type val3) { return minval(val1, minval(val2, val3)); }
-
-template <typename type>
-inline type maxval(type val1, type val2, type val3) { return maxval(val1, maxval(val2, val3)); }
-
-template <typename type>
-inline type clamp(type val, type _min, type _max)
+constexpr inline type clamp(type val, type _min, type _max)
 {
-	if (val < _min) return _min;
-	if (val > _max) return _max;
+	if (val < _min) val = _min;
+	if (val > _max) val = _max;
 	return val;
 }
-template <typename type>
-inline type saturate(type val) { return clamp(val, type(0), type(1)); }
-template <typename vectorType, typename coefType>
-inline vectorType lerp(const vectorType& x, const vectorType& y, coefType coef) { return x + coef * (y - x); }
-template <typename type>
-inline type lincoef(type a, type b, type coef) { return (a - coef) / (a - b); }
-template <typename type>
-inline type lincoefsatur(type a, type b, type coef) { return saturate(lincoef(a, b, coef)); }
-template <typename type>
-inline type sqrval(type val) { return val * val; }
-template <typename type>
-inline type intdivceil(type val, type div) { return (val - 1) / div + 1; }
-template <typename type>
-inline type alignval(type val, type mod) { return val / mod * mod; }
+template <typename type> constexpr inline type saturate(type val) { return clamp(val, type(0), type(1)); }
+template <typename vectorType, typename coefType> constexpr inline vectorType lerp(const vectorType& x, const vectorType& y, coefType coef) { return x + coef * (y - x); }
+template <typename type> constexpr inline type lincoef(type a, type b, type coef) { return (a - coef) / (a - b); }
+template <typename type> constexpr inline type lincoefsatur(type a, type b, type coef) { return saturate(lincoef(a, b, coef)); }
+template <typename type> constexpr inline type sqrval(type val) { return val * val; }
+template <typename type, typename _type> constexpr inline type intdivceil(type val, _type div) { return (val - 1) / type(div) + 1; }
+template <typename type, typename _type> constexpr inline type alignval(type val, _type mod) { return val / type(mod) * type(mod); }
+template <typename type> constexpr inline type absval(type val) { return val >= type(0) ? val : -val; }
+template <typename type> constexpr inline type minval(type val1, type val2) { return val1 < val2 ? val1 : val2; }
+template <typename type> constexpr inline type maxval(type val1, type val2) { return val1 > val2 ? val1 : val2; }
+template <typename type> constexpr inline type minval(type val1, type val2, type val3) { return minval(val1, minval(val2, val3)); }
+template <typename type> constexpr inline type maxval(type val1, type val2, type val3) { return maxval(val1, maxval(val2, val3)); }
 
-#define elemcntof_constexpr(arr) (sizeof(arr) / sizeof(*arr))
-#define minval_constexpr(val1, val2) ((val1) < (val2) ? (val1) : (val2))
-#define maxval_constexpr(val1, val2) ((val1) > (val2) ? (val1) : (val2))
-#define intdivceil_constexpr(val, div) (((val) - 1) / (div) + 1)
+template <typename type> constexpr type pi();
+template <> constexpr float32 pi<float32>() { return 3.14159265f; }
+template <> constexpr float64 pi<float64>() { return 3.141592653589793238; }
 
-#define PI_def 3.141592654f
+inline uint32 asUint32(float32 val) { return *((uint32*)&val); }
+inline uint64 asUint64(float64 val) { return *((uint64*)&val); }
+inline float64 asFloat64(uint64 val) { return *((float64*)&val); }
+inline float32 asFloat32(uint32 val) { return *((float32*)&val); }
+
+template <typename type> inline type nan();
+template <> inline float32 nan<float32>() { return asFloat32(0x7fc00000); }
+template <> inline float64 nan<float64>() { return asFloat64(0x7ff8'0000'0000'0000ull); }
+
+uint8 constexpr unormFloat32toUint8(float32 val) { return uint8(val * float32(uint8(-1))); }
 
 #endif

@@ -14,7 +14,7 @@ struct matrix4x4
 {
 	union
 	{
-		float data[4][4];
+		float32 data[4][4];
 		uint32 datau32[4][4];
 		uint32 datau32l[16];
 	};
@@ -39,7 +39,7 @@ struct matrix4x4
 		data[2][2] = 1.0f;
 		data[3][3] = 1.0f;
 	}
-	inline void setAsScale(float x, float y, float z)
+	inline void setAsScale(float32 x, float32 y, float32 z)
 	{
 		clear();
 		data[0][0] = x;
@@ -47,10 +47,10 @@ struct matrix4x4
 		data[2][2] = z;
 		data[3][3] = 1.0f;
 	}
-	inline void setAsRotateX(float angle)
+	inline void setAsRotateX(float32 angle)
 	{
 		clear();
-		float angleSin = sinf(angle), angleCos = cosf(angle);
+		float32 angleSin = sinf(angle), angleCos = cosf(angle);
 		data[0][0] = 1.0f;
 		data[1][1] = angleCos;
 		data[1][2] = angleSin;
@@ -58,20 +58,20 @@ struct matrix4x4
 		data[2][2] = angleCos;
 		data[3][3] = 1.0f;
 	}
-	inline void setAsRotateY(float angle)
+	inline void setAsRotateY(float32 angle)
 	{
 		clear();
-		float angleSin = sinf(angle), angleCos = cosf(angle);
+		float32 angleSin = sinf(angle), angleCos = cosf(angle);
 		data[0][0] = angleCos;
 		data[1][1] = 1.0f;
 		data[2][2] = angleCos;
 		data[0][2] = angleSin;
 		data[2][0] = -angleSin;
 	}
-	inline void setAsRotateZ(float angle)
+	inline void setAsRotateZ(float32 angle)
 	{
 		clear();
-		float angleSin = sinf(angle), angleCos = cosf(angle);
+		float32 angleSin = sinf(angle), angleCos = cosf(angle);
 		data[0][0] = angleCos;
 		data[1][1] = angleCos;
 		data[0][1] = angleSin;
@@ -79,7 +79,7 @@ struct matrix4x4
 		data[2][2] = 1.0f;
 		data[3][3] = 1.0f;
 	}
-	inline void setAsTranslate(float x, float y, float z)
+	inline void setAsTranslate(float32 x, float32 y, float32 z)
 	{
 		clear();
 		data[0][0] = 1.0f;
@@ -90,10 +90,10 @@ struct matrix4x4
 		data[3][1] = y;
 		data[3][2] = z;
 	}
-	inline void setAsPerspective(float fov, float aspect, float zNear, float zFar)
+	inline void setAsPerspective(float32 fov, float32 aspect, float32 zNear, float32 zFar)
 	{
-		float yScale = 1.0f / tanf(fov / 2.0f);
-		float xScale = yScale / aspect;
+		float32 yScale = 1.0f / tanf(fov / 2.0f);
+		float32 xScale = yScale / aspect;
 
 		clear();
 		data[0][0] = xScale;
@@ -144,37 +144,37 @@ struct matrix4x4
 		result.setAsIdentity();
 		return result;
 	}
-	static inline matrix4x4 Scale(float x, float y, float z)
+	static inline matrix4x4 Scale(float32 x, float32 y, float32 z)
 	{
 		matrix4x4 result;
 		result.setAsScale(x, y, z);
 		return result;
 	}
-	static inline matrix4x4 RotateX(float angle)
+	static inline matrix4x4 RotateX(float32 angle)
 	{
 		matrix4x4 result;
 		result.setAsRotateX(angle);
 		return result;
 	}
-	static inline matrix4x4 RotateY(float angle)
+	static inline matrix4x4 RotateY(float32 angle)
 	{
 		matrix4x4 result;
 		result.setAsRotateY(angle);
 		return result;
 	}
-	static inline matrix4x4 RotateZ(float angle)
+	static inline matrix4x4 RotateZ(float32 angle)
 	{
 		matrix4x4 result;
 		result.setAsRotateZ(angle);
 		return result;
 	}
-	static inline matrix4x4 Translate(float x, float y, float z)
+	static inline matrix4x4 Translate(float32 x, float32 y, float32 z)
 	{
 		matrix4x4 result;
 		result.setAsTranslate(x, y, z);
 		return result;
 	}
-	static inline matrix4x4 Perspective(float fov, float aspect, float zNear, float zFar)
+	static inline matrix4x4 Perspective(float32 fov, float32 aspect, float32 zNear, float32 zFar)
 	{
 		matrix4x4 result;
 		result.setAsPerspective(fov, aspect, zNear, zFar);

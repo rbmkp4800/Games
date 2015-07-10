@@ -5,16 +5,20 @@
 #include "D3DHelper.h"
 #include "DXGIHelper.h"
 
-#include <extypes.matrix3x2.h>
-
 #include "Render2D.h"
+
+#include <extypes.matrix3x2.h>
 
 #include "Shaders\Compiled\vsColor.csoh"
 #include "Shaders\Compiled\vsTex.csoh"
 #include "Shaders\Compiled\vsEllipse.csoh"
+#include "Shaders\Compiled\vsTexColor.csoh"
 #include "Shaders\Compiled\psColor.csoh"
 #include "Shaders\Compiled\psTex.csoh"
 #include "Shaders\Compiled\psEllipse.csoh"
+#include "Shaders\Compiled\psTexColor.csoh"
+
+#include "DefaultFont.h"
 
 using namespace Render2D;
 
@@ -22,19 +26,47 @@ IDXGIFactory3 *Device::dxgiFactory = nullptr;
 
 Device::Device()
 {
-	memset(this, 0, sizeof(*this));
+	d3dDevice = nullptr;
+	d3dContext = nullptr;
+
+	d3dColorIL = nullptr;
+	d3dTextureIL = nullptr;
+	d3dEllipseIL = nullptr;
+	d3dTexColorIL = nullptr;
+	d3dColorVS = nullptr;
+	d3dTextureVS = nullptr;
+	d3dEllipseVS = nullptr;
+	d3dTexColorVS = nullptr;
+	d3dColorPS = nullptr;
+	d3dTexturePS = nullptr;
+	d3dEllipsePS = nullptr;
+	d3dTexColorPS = nullptr;
+
+	vertexBufferSize = 0;
+	d3dVertexBuffer = nullptr;
+	d3dTransformVSCB = nullptr;
+
+	d3dDefaultRS = nullptr;
+	d3dDefaultSS = nullptr;
+	d3dAlphaBS = nullptr;
+
+	currentTarget = nullptr;
+	aaPixelSize = nan<float32>();
 }
 Device::~Device()
 {
 	SafeComInterfaceRelease(d3dColorIL);
-	SafeComInterfaceRelease(d3dTexIL);
+	SafeComInterfaceRelease(d3dTextureIL);
 	SafeComInterfaceRelease(d3dEllipseIL);
+	SafeComInterfaceRelease(d3dTexColorIL);
 	SafeComInterfaceRelease(d3dColorVS);
-	SafeComInterfaceRelease(d3dTexVS);
+	SafeComInterfaceRelease(d3dTextureVS);
 	SafeComInterfaceRelease(d3dEllipseVS);
+	SafeComInterfaceRelease(d3dTexColorVS);
 	SafeComInterfaceRelease(d3dColorPS);
-	SafeComInterfaceRelease(d3dTexPS);
+	SafeComInterfaceRelease(d3dTexturePS);
 	SafeComInterfaceRelease(d3dEllipsePS);
+	SafeComInterfaceRelease(d3dTexColorPS);
 
 	SafeComInterfaceRelease(d3dVertexBuffer);
 	SafeComInterfaceRelease(d3dTransformVSCB);
@@ -86,16 +118,27 @@ bool Device::Create(uint32 _vertexBufferSize)
 		{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
+	D3D11_INPUT_ELEMENT_DESC d3dVertexTexColorILDesc[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
 
 	d3dDevice->CreateInputLayout(d3dVertexColorILDesc, elemcntof(d3dVertexColorILDesc), vsColorData, sizeof(vsColorData), &d3dColorIL);
-	d3dDevice->CreateInputLayout(d3dVertexTexILDesc, elemcntof(d3dVertexTexILDesc), vsTexData, sizeof(vsTexData), &d3dTexIL);
+	d3dDevice->CreateInputLayout(d3dVertexTexILDesc, elemcntof(d3dVertexTexILDesc), vsTexData, sizeof(vsTexData), &d3dTextureIL);
 	d3dDevice->CreateInputLayout(d3dVertexEllipseILDesc, elemcntof(d3dVertexEllipseILDesc), vsEllipseData, sizeof(vsEllipseData), &d3dEllipseIL);
+	d3dDevice->CreateInputLayout(d3dVertexTexColorILDesc, elemcntof(d3dVertexTexColorILDesc), vsTexColorData, sizeof(vsTexColorData), &d3dTexColorIL);
+
 	d3dDevice->CreateVertexShader(vsColorData, sizeof(vsColorData), nullptr, &d3dColorVS);
-	d3dDevice->CreateVertexShader(vsTexData, sizeof(vsTexData), nullptr, &d3dTexVS);
+	d3dDevice->CreateVertexShader(vsTexData, sizeof(vsTexData), nullptr, &d3dTextureVS);
 	d3dDevice->CreateVertexShader(vsEllipseData, sizeof(vsEllipseData), nullptr, &d3dEllipseVS);
+	d3dDevice->CreateVertexShader(vsTexColorData, sizeof(vsTexColorData), nullptr, &d3dTexColorVS);
+
 	d3dDevice->CreatePixelShader(psColorData, sizeof(psColorData), nullptr, &d3dColorPS);
-	d3dDevice->CreatePixelShader(psTexData, sizeof(psTexData), nullptr, &d3dTexPS);
+	d3dDevice->CreatePixelShader(psTexData, sizeof(psTexData), nullptr, &d3dTexturePS);
 	d3dDevice->CreatePixelShader(psEllipseData, sizeof(psEllipseData), nullptr, &d3dEllipsePS);
+	d3dDevice->CreatePixelShader(psTexColorData, sizeof(psTexColorData), nullptr, &d3dTexColorPS);
 
 	d3dDevice->CreateBuffer(&D3D11BufferDesc(vertexBufferSize, D3D11_BIND_VERTEX_BUFFER), nullptr, &d3dVertexBuffer);
 	d3dDevice->CreateBuffer(&D3D11BufferDesc(sizeof(float32x4) * 2, D3D11_BIND_CONSTANT_BUFFER), nullptr, &d3dTransformVSCB);
@@ -107,6 +150,8 @@ bool Device::Create(uint32 _vertexBufferSize)
 	d3dDevice->CreateSamplerState(&D3D11SamplerDesc(D3D11_FILTER_MIN_MAG_MIP_LINEAR,
 		D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP), &d3dDefaultSS);
 
+	currentTarget = nullptr;
+	aaPixelSize = nan<float32>();
 	SetTransform(matrix3x2::identity());
 
 	return true;
@@ -114,11 +159,18 @@ bool Device::Create(uint32 _vertexBufferSize)
 
 void Device::SetTarget(IRenderTarget *target)
 {
+	currentTarget = target;
 	ID3D11RenderTargetView *d3dRenderTargetView = target->GetD3D11RenderTargetView();
 	d3dContext->OMSetRenderTargets(1, &d3dRenderTargetView, nullptr);
 
 	uint32x2 targetSize = target->GetSize();
-	d3dContext->RSSetViewports(1, &D3D11ViewPort(0.0f, 0.0f, float(targetSize.x), float(targetSize.y)));
+	d3dContext->RSSetViewports(1, &D3D11ViewPort(0.0f, 0.0f, float32(targetSize.x), float32(targetSize.y)));
+}
+void Render2D::Device::ResetTarget()
+{
+	currentTarget = nullptr;
+	ID3D11RenderTargetView *d3dNullRTV = nullptr;
+	d3dContext->OMSetRenderTargets(1, &d3dNullRTV, nullptr);
 }
 void Device::SetTexture(IShaderResource *texture)
 {
@@ -140,21 +192,17 @@ void Device::SetTransform(const matrix3x2& _transform)
 	transform.row1.set(_transform.data[0][1], _transform.data[1][1], _transform.data[2][1], 0.0f);
 	d3dContext->UpdateSubresource(d3dTransformVSCB, 0, nullptr, &transform, 0, 0);
 }
-
-void Device::Clear(IRenderTarget* target, coloru32 color)
+void Device::SetDirectTransform()
 {
-	float colorf[4];
+	uint32x2 size = currentTarget->GetSize();
+	SetTransform(matrix3x2::translation(-1.0f, 1.0f) * matrix3x2::scale(2.0f / float32(size.x), -2.0f / float32(size.y)), 1.0f);
+}
+
+void Device::Clear(IRenderTarget* target, Color color)
+{
+	float32 colorf[4];
 	color.toFloat4Unorm(colorf);
 	d3dContext->ClearRenderTargetView(target->GetD3D11RenderTargetView(), colorf);
-}
-void Device::Clear(coloru32 color)
-{
-	float colorf[4];
-	color.toFloat4Unorm(colorf);
-	ID3D11RenderTargetView *d3dRenderTargetView = nullptr;
-	d3dContext->OMGetRenderTargets(1, &d3dRenderTargetView, nullptr);
-	if (d3dRenderTargetView)
-		d3dContext->ClearRenderTargetView(d3dRenderTargetView, colorf);
 }
 
 void Device::UpdateTexture(ITexture* texture, rectu32* rect, void* data)
@@ -172,15 +220,20 @@ void Device::UpdateVertexBuffer(VertexColor* vertices, uint32 vertexCount)
 	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexColor) * vertexCount), vertices, 0, 0);
 	setD3DDeviceContextStates(d3dColorIL, d3dColorVS, d3dColorPS, sizeof(VertexColor));
 }
-void Device::UpdateVertexBuffer(VertexTex* vertices, uint32 vertexCount)
+void Device::UpdateVertexBuffer(VertexTexture* vertices, uint32 vertexCount)
 {
-	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexTex) * vertexCount), vertices, 0, 0);
-	setD3DDeviceContextStates(d3dTexIL, d3dTexVS, d3dTexPS, sizeof(VertexTex));
+	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexTexture) * vertexCount), vertices, 0, 0);
+	setD3DDeviceContextStates(d3dTextureIL, d3dTextureVS, d3dTexturePS, sizeof(VertexTexture));
 }
 void Device::UpdateVertexBuffer(VertexEllipse* vertices, uint32 vertexCount)
 {
 	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexEllipse) * vertexCount), vertices, 0, 0);
 	setD3DDeviceContextStates(d3dEllipseIL, d3dEllipseVS, d3dEllipsePS, sizeof(VertexEllipse));
+}
+void Device::UpdateVertexBuffer(VertexTexColor* vertices, uint32 vertexCount)
+{
+	d3dContext->UpdateSubresource(d3dVertexBuffer, 0, &D3D11Box(0, sizeof(VertexTexColor) * vertexCount), vertices, 0, 0);
+	setD3DDeviceContextStates(d3dTexColorIL, d3dTexColorVS, d3dTexColorPS, sizeof(VertexTexColor));
 }
 
 inline void Device::setD3DDeviceContextStates(ID3D11InputLayout* d3dInputLayout, 
@@ -208,7 +261,7 @@ void Device::DrawIndexed(uint32 indexCount)
 
 IndexBuffer* Device::GetQuadIndexBuffer()
 {
-	if (!quadIndexBuffer.GetID3D11Buffer())
+	if (!quadIndexBuffer.IsInitialized())
 	{
 		uint32 indexBufferSize = vertexBufferSize / 2;
 		uint16x3 *indexBuffer = (uint16x3*) malloc(sizeof(uint16x3) * indexBufferSize);
@@ -222,13 +275,26 @@ IndexBuffer* Device::GetQuadIndexBuffer()
 	}
 	return &quadIndexBuffer;
 }
+MonospaceFont* Device::GetDefaultFont()
+{
+	if (!defaultFont.IsInitialized())
+	{
+		uint32 bitmapSize = defaultFontWidth * defaultFontHeight * MonospaceFont::charTableSize;
+		uint8 *bitmapData = (uint8*) malloc(sizeof(uint8) * bitmapSize);
+		for (uint32 i = 0; i < bitmapSize; i++)
+			bitmapData[i] = (defaultFontData[i / 32] >> (i % 32)) & 1 ? 0xff : 0;
+		defaultFont.Create(this, defaultFontWidth, defaultFontHeight, bitmapData);
+		free(bitmapData);
+	}
+	return &defaultFont;
+}
 
 //--------------------------------Interfaces----------------------------------//
 
-inline bool ITexture::InitITexture(ID3D11Device* d3dDevice, uint32 x, uint32 y, void* data, uint32 bindFlags)
+inline bool ITexture::InitITexture(ID3D11Device* d3dDevice, uint32 width, uint32 height, void* data, uint32 bindFlags)
 {
-	return SUCCEEDED(d3dDevice->CreateTexture2D(&D3D11Texture2DDesc(x, y, bindFlags),
-		data ? &D3D11SubresourceData(data, x * 4) : nullptr, &d3dTexture));
+	return SUCCEEDED(d3dDevice->CreateTexture2D(&D3D11Texture2DDesc(width, height, bindFlags),
+		data ? &D3D11SubresourceData(data, width * 4) : nullptr, &d3dTexture));
 }
 inline bool IShaderResource::InitIShaderResource(ID3D11Device* d3dDevice)
 {
@@ -242,7 +308,7 @@ uint32x2 ITexture::GetSize()
 {
 	if (d3dTexture)
 	{
-		D3D11_TEXTURE2D_DESC d3dTextureDesc;
+		D3D11_TEXTURE2D_DESC d3dTextureDesc = { 0 };
 		d3dTexture->GetDesc(&d3dTextureDesc);
 		return uint32x2(d3dTextureDesc.Width, d3dTextureDesc.Height);
 	}
@@ -263,10 +329,10 @@ IRenderTarget::~IRenderTarget()
 
 //--------------------------------Objects----------------------------------//
 
-bool Texture::Create(Device* device, uint32 x, uint32 y, void* data)
+bool Texture::Create(Device* device, uint32 width, uint32 height, void* data)
 {
 	bool result = true;
-	result &= InitITexture(device->GetD3DDevice(), x, y, data, D3D11_BIND_SHADER_RESOURCE);
+	result &= InitITexture(device->GetD3DDevice(), width, height, data, D3D11_BIND_SHADER_RESOURCE);
 	result &= InitIShaderResource(device->GetD3DDevice());
 
 	if (result)
@@ -274,33 +340,10 @@ bool Texture::Create(Device* device, uint32 x, uint32 y, void* data)
 	this->~Texture();
 	return false;
 }
-/*bool Texture::CreateFromPng(wchar_t* filename)
-{
-	HANDLE hFile = CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
-	if (hFile == INVALID_HANDLE_VALUE)
-		return false;
-
-	FILE_STANDARD_INFO fileInfo;
-	GetFileInformationByHandleEx(hFile, FileStandardInfo, &fileInfo, sizeof(FILE_STANDARD_INFO));
-	uint32 fileSize = (uint32) fileInfo.EndOfFile.QuadPart;
-	void* fileData = malloc(fileSize);
-	ReadFile(hFile, fileData, fileSize, nullptr, nullptr);
-	CloseHandle(hFile);
-
-	uint8* textureData = nullptr;
-	uint32 width = 0, height = 0;
-	uint32 pngDecodeResult = lodepng_decode32(&textureData, &width, &height, (uint8*) fileData, fileSize);
-	free(fileData);
-	if (pngDecodeResult)
-		return false;
-	bool result = Create(width, height, textureData);
-	free(textureData);
-	return result;
-}*/
-bool RenderTarget::Create(Device* device, uint32 x, uint32 y, void* data)
+bool RenderTarget::Create(Device* device, uint32 width, uint32 height, void* data)
 {
 	bool result = true;
-	result &= InitITexture(device->GetD3DDevice(), x, y, data, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
+	result &= InitITexture(device->GetD3DDevice(), width, height, data, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE);
 	result &= InitIShaderResource(device->GetD3DDevice());
 	result &= InitIRenderTarget(device->GetD3DDevice());
 
@@ -310,28 +353,29 @@ bool RenderTarget::Create(Device* device, uint32 x, uint32 y, void* data)
 	return false;
 }
 
-bool SwapChain::CreateForComposition(Device* device, IUnknown* panel, uint32 x, uint32 y)
+bool SwapChain::CreateForComposition(Device* device, IUnknown* panel, uint32 width, uint32 height)
 {
 	bool result = true;
 	ISwapChainBackgroundPanelNative *swapChainNativePanel;
 	if (FAILED(panel->QueryInterface(__uuidof(ISwapChainBackgroundPanelNative), (void**) &swapChainNativePanel)))
 		return false;
 	result &= SUCCEEDED(Device::GetDXGIFactory()->CreateSwapChainForComposition(device->GetD3DDevice(),
-		&DXGISwapChainDesc1(x, y), nullptr, &dxgiSwapChain));
+		&DXGISwapChainDesc1(width, height), nullptr, &dxgiSwapChain));
 	swapChainNativePanel->SetSwapChain(dxgiSwapChain);
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
 	result &= InitIRenderTarget(device->GetD3DDevice());
+	SafeComInterfaceRelease(swapChainNativePanel);
 
 	if (result)
 		return true;
 	this->~SwapChain();
 	return false;
 }
-bool SwapChain::CreateForHWnd(Device* device, void* hWnd, uint32 x, uint32 y)
+bool SwapChain::CreateForHWnd(Device* device, void* hWnd, uint32 width, uint32 height)
 {
 	bool result = true;
-	result &= SUCCEEDED(Device::GetDXGIFactory()->CreateSwapChainForHwnd(device->GetD3DDevice(), (HWND) hWnd,
-		&DXGISwapChainDesc1(x, y), nullptr, nullptr, &dxgiSwapChain));
+	result &= SUCCEEDED(Device::GetDXGIFactory()->CreateSwapChainForHwnd(device->GetD3DDevice(), HWND(hWnd),
+		&DXGISwapChainDesc1(width, height), nullptr, nullptr, &dxgiSwapChain));
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
 	result &= InitIRenderTarget(device->GetD3DDevice());
 
@@ -340,17 +384,15 @@ bool SwapChain::CreateForHWnd(Device* device, void* hWnd, uint32 x, uint32 y)
 	this->~SwapChain();
 	return false;
 }
-bool SwapChain::Resize(uint32 x, uint32 y)
+bool SwapChain::Resize(Device* device, uint32 width, uint32 height)
 {
-	ID3D11Device *d3dDevice = nullptr;
-	d3dRenderTargetView->GetDevice(&d3dDevice);
-
 	SafeComInterfaceRelease(d3dRenderTargetView);
 	SafeComInterfaceRelease(d3dTexture);
+
 	bool result = true;
-	result &= SUCCEEDED(dxgiSwapChain->ResizeBuffers(0, x, y, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+	result &= SUCCEEDED(dxgiSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 	dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**) &d3dTexture);
-	result &= InitIRenderTarget(d3dDevice);
+	result &= InitIRenderTarget(device->GetD3DDevice());
 
 	if (result)
 		return true;
@@ -375,6 +417,27 @@ bool IndexBuffer::Create(Device* device, uint32 size, void* data)
 IndexBuffer::~IndexBuffer()
 {
 	SafeComInterfaceRelease(d3dBuffer);
+}
+
+bool MonospaceFont::Create(Device* device, uint32 _width, uint32 _height, void* data)
+{
+	width = float32(_width);
+	height = float32(_height);
+
+	bool result = true;
+	result &= SUCCEEDED(device->GetD3DDevice()->CreateTexture2D(&D3D11Texture2DDesc(_width * MonospaceFont::charTableSize, _height,
+		D3D11_BIND_SHADER_RESOURCE, DXGI_FORMAT_R8_UNORM), &D3D11SubresourceData(data, _width * MonospaceFont::charTableSize), &d3dTexture));
+	result &= InitIShaderResource(device->GetD3DDevice());
+
+	if (result)
+		return true;
+	this->~MonospaceFont();
+	return false;
+}
+MonospaceFont::~MonospaceFont()
+{
+	SafeComInterfaceRelease(d3dShaderResourceView);
+	SafeComInterfaceRelease(d3dTexture);
 }
 
 //--------------------------------Batches--------------------------------//

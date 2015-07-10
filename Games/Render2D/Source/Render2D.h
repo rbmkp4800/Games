@@ -24,9 +24,12 @@ struct matrix3x2;
 
 namespace Render2D
 {
-	static const float opacityThreshold = 0.01f;
+	constexpr float32 opacityThreshold = 0.01f;
 
-	struct coloru32
+	constexpr inline uint32 operator "" _rgb(uint64 val) { return ((val & 0xff) << 16) | (val & 0xff00) | ((val & 0xff0000) >> 16) | 0xff000000; }
+	constexpr inline uint32 operator "" _rgba(uint64 val) { return ((val & 0xff) << 24) | ((val & 0xff00) << 8) | ((val & 0xff0000) >> 8) | ((val & 0xff000000) >> 24); }
+
+	struct Color
 	{
 		union
 		{
@@ -36,70 +39,70 @@ namespace Render2D
 			};
 			uint32 rgba;
 		};
-		inline coloru32() : rgba(0) {}
-		inline coloru32(uint32 _rgba) : rgba(_rgba) {}
-		inline coloru32(uint32 rgb, uint8 _a) : rgba((rgb & 0xffffff) | (_a << 24)) {}
-		inline coloru32(uint32 rgb, float _a) : rgba((rgb & 0xffffff) | ((uint32)(saturate(_a) * 255.0f) << 24)) {}
-		inline coloru32(uint8 _r, uint8 _g, uint8 _b, uint8 _a = 0xff) : r(_r), g(_g), b(_b), a(_a) {}
+		inline Color() : rgba(0) {}
+		inline Color(uint32 _rgba) : rgba(_rgba) {}
+		inline Color(uint32 rgb, uint8 _a) { rgba = rgb; a = _a; }
+		inline Color(uint8 _r, uint8 _g, uint8 _b, uint8 _a = 0xff) : r(_r), g(_g), b(_b), a(_a) {}
+
+		inline void set(uint32 _rgba) { rgba = _rgba; }
 		inline void set(uint8 _r, uint8 _g, uint8 _b, uint8 _a = 0xff) { r = _r; g = _g; b = _b; a = _a; }
-		inline void set(uint32 rgb, uint8 _a = 0xff) { rgba = rgb & 0xffffff | _a << 24; }
-		inline float32x4 toFloat4Unorm() { return float32x4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f); }
-		inline void toFloat4Unorm(float* result)
-		{
-			result[0] = r / 255.0f;
-			result[1] = g / 255.0f;
-			result[2] = b / 255.0f;
-			result[3] = a / 255.0f;
-		}
+
+		inline operator uint32() const { return rgba; }
+		inline float32x4 toFloat4Unorm() const { return float32x4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f); }
+		inline void toFloat4Unorm(float32* result) const { result[0] = r / 255.0f; result[1] = g / 255.0f; result[2] = b / 255.0f; result[3] = a / 255.0f; }
 	};
 
-	inline coloru32 lerp(const coloru32& a, const coloru32& b, float coef)
+	inline Color lerp(const Color& a, const Color& b, float32 coef)
 	{
-		return coloru32(
-			uint8(::lerp(float(a.r), float(b.r), coef)),
-			uint8(::lerp(float(a.g), float(b.g), coef)),
-			uint8(::lerp(float(a.b), float(b.b), coef)),
-			uint8(::lerp(float(a.a), float(b.a), coef)));
+		return Color(
+			uint8(::lerp(float32(a.r), float32(b.r), coef)),
+			uint8(::lerp(float32(a.g), float32(b.g), coef)),
+			uint8(::lerp(float32(a.b), float32(b.b), coef)),
+			uint8(::lerp(float32(a.a), float32(b.a), coef)));
 	}
-	inline coloru32 lerp_clamp(const coloru32& a, const coloru32& b, float coef)
+	inline Color lerp_clamp(const Color& a, const Color& b, float32 coef)
 	{
-		return coloru32(
-			uint8(clamp(::lerp(float(a.r), float(b.r), coef), 1.0f, 255.0f)),
-			uint8(clamp(::lerp(float(a.g), float(b.g), coef), 1.0f, 255.0f)),
-			uint8(clamp(::lerp(float(a.b), float(b.b), coef), 1.0f, 255.0f)),
-			uint8(clamp(::lerp(float(a.a), float(b.a), coef), 1.0f, 255.0f)));
+		return Color(
+			uint8(clamp(::lerp(float32(a.r), float32(b.r), coef), 0.0f, 255.0f)),
+			uint8(clamp(::lerp(float32(a.g), float32(b.g), coef), 0.0f, 255.0f)),
+			uint8(clamp(::lerp(float32(a.b), float32(b.b), coef), 0.0f, 255.0f)),
+			uint8(clamp(::lerp(float32(a.a), float32(b.a), coef), 0.0f, 255.0f)));
 	}
 
-	struct colors
+	class Colors abstract
 	{
-		static const uint32
-			transparent = 0x00000000,
-			black = 0xff000000,
-			white = 0xffffffff,
-			red = 0xff0000ff,
-			green = 0xff00ff00,
-			blue = 0xffff0000,
-			yellow = 0xff00ffff,
-			magenta = 0xffff00ff,
-			cyan = 0xffffff00,
-			darkRed = 0xff00007f,
-			darkGreen = 0xff007f00,
-			darkBlue = 0xff7f0000,
-			darkYellow = 0xff007f7f,
-			darkMagenta = 0xff7f007f,
-			darkCyan = 0xff7f7f00,
-			dodgerBlue = 0xffff901e,
-			gray = 0xff7f7f7f,
-			cornflowerBlue = 0xffed9564,
-			lightRed = 0xff7f7fff,
-			lightGreen = 0xff7fff7f,
-			lightBlue = 0xffe6d8ad,
-			lightSalmon = 0xff7aa0ff,
-			lightSkyBlue = 0xffface87,
-			skyBlue = 0xffebce87,
-			lightGray = 0xffc0c0c0,
-			darkGray = 0xff3f3f3f,
-			lightYellow = 0xff7fffff;
+	public:
+		static constexpr uint32
+			Black =			0x000000_rgb,
+			White =			0xffffff_rgb,
+			Red =			0xff0000_rgb,
+			Green =			0x00ff00_rgb,
+			Blue =			0x0000ff_rgb,
+			Yellow =		0xffff00_rgb,
+			Magenta =		0xff00ff_rgb,
+			Cyan =			0xffff00_rgb,
+
+			DarkRed =		0x7f0000_rgb,
+			DarkGreen =		0x007f00_rgb,
+			DarkBlue =		0x00007f_rgb,
+			DarkYellow =	0x7f7f00_rgb,
+			DarkMagenta =	0x7f007f_rgb,
+			DarkCyan =		0x007f7f_rgb,
+
+			LightRed =		0xff7f7f_rgb,
+			LightGreen =	0x90ee90_rgb,
+			LightBlue =		0xadd8e6_rgb,
+			LightYellow =	0xffff7f_rgb,
+			LightSalmon =	0xffa07a_rgb,
+			LightSkyBlue =	0x87cefa_rgb,
+			SkyBlue =		0x87ceeb_rgb,
+
+			Gray =			0x7f7f7f_rgb,
+			LightGray =		0xc0c0c0_rgb,
+			DarkGray =		0x3f3f3f_rgb,
+
+			CornflowerBlue = 0xffed9564,
+			DodgerBlue = 0x1e90ff;
 	};
 
 	//--------------------------------Interfaces----------------------------------//
@@ -122,7 +125,7 @@ namespace Render2D
 	protected:
 		ID3D11Texture2D *d3dTexture;
 
-		inline bool InitITexture(ID3D11Device* d3dDevice, uint32 x, uint32 y, void* data, uint32 bindFlags);
+		inline bool InitITexture(ID3D11Device* d3dDevice, uint32 width, uint32 height, void* data, uint32 bindFlags);
 
 	public:
 		inline ITexture() : d3dTexture(nullptr) {}
@@ -165,13 +168,13 @@ namespace Render2D
 	class Texture : public IShaderResource
 	{
 	public:
-		bool Create(Device* device, uint32 x, uint32 y, void* data = nullptr);
+		bool Create(Device* device, uint32 width, uint32 height, void* data = nullptr);
 	};
 
 	class RenderTarget : public IShaderResource, public IRenderTarget
 	{
 	public:
-		bool Create(Device* device, uint32 x, uint32 y, void* data = nullptr);
+		bool Create(Device* device, uint32 width, uint32 height, void* data = nullptr);
 	};
 
 	class SwapChain : public IRenderTarget
@@ -183,9 +186,9 @@ namespace Render2D
 		inline SwapChain() : dxgiSwapChain(nullptr) {}
 		~SwapChain();
 
-		bool CreateForComposition(Device* device, IUnknown* panel, uint32 x, uint32 y);
-		bool CreateForHWnd(Device* device, void* hWnd, uint32 x, uint32 y);
-		bool Resize(uint32 x, uint32 y);
+		bool CreateForComposition(Device* device, IUnknown* panel, uint32 width, uint32 height);
+		bool CreateForHWnd(Device* device, void* hWnd, uint32 width, uint32 height);
+		bool Resize(Device* device, uint32 width, uint32 height);
 		void Present(bool sync = true);
 	};
 
@@ -201,6 +204,29 @@ namespace Render2D
 		bool Create(Device* device, uint32 size, void* data = nullptr);
 
 		inline ID3D11Buffer* GetID3D11Buffer() { return d3dBuffer; }
+		inline bool IsInitialized() { return d3dBuffer ? true : false; }
+	};
+
+	class MonospaceFont : public IShaderResource
+	{
+	public:
+		static constexpr uint8 firstCharCode = 33;
+		static constexpr uint8 lastCharCode = 255;
+		static constexpr uint32 charTableSize = lastCharCode - firstCharCode + 1;
+		static constexpr float32 tableCharWidth = 1.0f / float32(charTableSize);
+
+	private:
+		float32 width, height;
+
+	public:
+		inline MonospaceFont() : width(0.0f), height(0.0f) {}
+		~MonospaceFont();
+
+		bool Create(Device* device, uint32 _width, uint32 _height, void* data);
+
+		inline bool IsInitialized() { return d3dShaderResourceView ? true : false; }
+		inline float32 GetHeight() { return height; }
+		inline float32 GetAspect() { return width / height; }
 	};
 
 	//-----------------------------------Device-------------------------------------//
@@ -208,27 +234,35 @@ namespace Render2D
 	struct VertexColor	//12 bytes, 6 floats
 	{
 		float32x2 pos;
-		coloru32 color;
+		uint32 color;
 
-		inline void set(float32x2 _pos, coloru32 _color) { pos = _pos; color = _color; }
+		inline void set(float32x2 _pos, uint32 _color) { pos = _pos; color = _color; }
 	};
-	struct VertexTex	//20 bytes, 5 floats
+	struct VertexTexture	//20 bytes, 5 floats
 	{
 		float32x2 pos;
 		float32x2 tex;
-		float alpha;
+		float32 alpha;
 
-		inline void set(float32x2 _pos, float32x2 _tex, float _alpha) { pos = _pos; tex = _tex; alpha = _alpha; }
+		inline void set(float32x2 _pos, float32x2 _tex, float32 _alpha) { pos = _pos; tex = _tex; alpha = _alpha; }
 	};
 	struct VertexEllipse	//32 bytes, 14 floats
 	{
 		float32x2 pos;
 		float32x2 tex;
-		float outerRadius, innerRadius;
-		coloru32 outerColor, innerColor;
+		float32 outerRadius, innerRadius;
+		uint32 outerColor, innerColor;
 
-		inline void set(float32x2 _pos, float32x2 _tex, float _outerRadius, float _innerRadius, coloru32 _outerColor, coloru32 _innerColor)
+		inline void set(float32x2 _pos, float32x2 _tex, float32 _outerRadius, float32 _innerRadius, uint32 _outerColor, uint32 _innerColor)
 		{ pos = _pos; tex = _tex; outerRadius = _outerRadius; innerRadius = _innerRadius; outerColor = _outerColor; innerColor = _innerColor; }
+	};
+	struct VertexTexColor	//20 bytes, 8 floats
+	{
+		float32x2 pos;
+		float32x2 tex;
+		uint32 color;
+
+		inline void set(float32x2 _pos, float32x2 _tex, uint32 _color) { pos = _pos; tex = _tex; color = _color; }
 	};
 
 	class Device : public INoncopyable
@@ -239,9 +273,9 @@ namespace Render2D
 		ID3D11Device *d3dDevice;
 		ID3D11DeviceContext *d3dContext;
 
-		ID3D11InputLayout *d3dColorIL, *d3dTexIL, *d3dEllipseIL;
-		ID3D11VertexShader *d3dColorVS, *d3dTexVS, *d3dEllipseVS;
-		ID3D11PixelShader *d3dColorPS, *d3dTexPS, *d3dEllipsePS;
+		ID3D11InputLayout *d3dColorIL, *d3dTextureIL, *d3dEllipseIL, *d3dTexColorIL;
+		ID3D11VertexShader *d3dColorVS, *d3dTextureVS, *d3dEllipseVS, *d3dTexColorVS;
+		ID3D11PixelShader *d3dColorPS, *d3dTexturePS, *d3dEllipsePS, *d3dTexColorPS;
 
 		uint32 vertexBufferSize;
 		ID3D11Buffer *d3dVertexBuffer;
@@ -255,10 +289,13 @@ namespace Render2D
 			ID3D11VertexShader* d3dVertexShader, ID3D11PixelShader* d3dPixelShader, uint32 vertexSize);
 
 		IndexBuffer quadIndexBuffer;
-		float aaPixelSize;
+		MonospaceFont defaultFont;
+
+		IRenderTarget *currentTarget;
+		float32 aaPixelSize;
 
 	public:
-		static const uint32 defaultVertexBufferSize = 0x10000;
+		static constexpr uint32 defaultVertexBufferSize = 0x10000;
 
 		Device();
 		~Device();
@@ -266,23 +303,22 @@ namespace Render2D
 		bool Create(uint32 _vertexBufferSize = defaultVertexBufferSize);
 
 		void SetTarget(IRenderTarget* target);
+		void ResetTarget();
 		void SetTexture(IShaderResource* texture);
 		void SetIndexBuffer(IndexBuffer* indexBuffer);
 		void SetTransform(const matrix3x2& _transform);
-		inline void SetTransform(const matrix3x2& transform, float _aaPixelSize)
-		{
-			aaPixelSize = _aaPixelSize;
-			SetTransform(transform);
-		}
+		void SetDirectTransform();
+		inline void SetTransform(const matrix3x2& transform, float32 _aaPixelSize) { aaPixelSize = _aaPixelSize; SetTransform(transform); }
 
-		void Clear(IRenderTarget* target, coloru32 color);
-		void Clear(coloru32 color);
+		void Clear(IRenderTarget* target, Color color);
+		inline void Clear(Color color) { Clear(currentTarget, color); }
 
 		void UpdateTexture(ITexture* texture, rectu32* rect, void* data);
 		void UpdateIndexBuffer(IndexBuffer* indexBuffer, uint32 left, uint32 right, void* data);
 		void UpdateVertexBuffer(VertexColor* vertices, uint32 vertexCount);
-		void UpdateVertexBuffer(VertexTex* vertices, uint32 vertexCount);
+		void UpdateVertexBuffer(VertexTexture* vertices, uint32 vertexCount);
 		void UpdateVertexBuffer(VertexEllipse* vertices, uint32 vertexCount);
+		void UpdateVertexBuffer(VertexTexColor* vertices, uint32 vertexCount);
 
 		void Draw(uint32 vertexCount);
 		void DrawIndexed(uint32 indexCount);
@@ -308,12 +344,13 @@ namespace Render2D
 		}
 
 		IndexBuffer* GetQuadIndexBuffer();
+		MonospaceFont *GetDefaultFont();
 
 		static inline IDXGIFactory3* GetDXGIFactory() { return dxgiFactory; }
 		inline ID3D11Device* GetD3DDevice() { return d3dDevice; }
 		inline ID3D11DeviceContext* GetD3DDeviceContext() { return d3dContext; }
 		inline uint32 GetVertexBufferSize() { return vertexBufferSize; }
-		inline float GetAAPixelSize() { return aaPixelSize; }
+		inline float32 GetAAPixelSize() { return aaPixelSize; }
 		inline bool IsInitialized() { return d3dDevice ? true : false; }
 	};
 
@@ -326,11 +363,11 @@ namespace Render2D
 		Vertical = 2,
 	};
 
-	inline rectf32 circle(float32x2 center, float radius)
+	constexpr inline rectf32 circle(float32x2 center, float32 radius)
 	{
 		return rectf32(center.x - radius, center.y - radius, center.x + radius, center.y + radius);
 	}
-	inline rectf32 ellipse(float32x2 center, float radiusx, float radiusy)
+	constexpr inline rectf32 ellipse(float32x2 center, float32 radiusx, float32 radiusy)
 	{
 		return rectf32(center.x - radiusx, center.y - radiusy, center.x + radiusx, center.y + radiusy);
 	}
@@ -343,7 +380,7 @@ namespace Render2D
 
 	public:
 		void* GetPointer() { return buffer; }
-		uintptr GetSize() { return size; }
+		constexpr uintptr GetSize() { return size; }
 	};
 
 	class Batch : public INoncopyable
@@ -359,14 +396,15 @@ namespace Render2D
 			Color = 1,
 			Tex = 2,
 			Ellipse = 3,
+			TexColor = 4,
 		} effect;
+		IShaderResource *currentTexture;
 		bool quadIndexationEnabled;
 		bool privateMemoryBuffer;
 
-		inline void checkState(Effect _effect, uint32 quadIndexedVertexCount,
-			uint32 quadUnindexedVertexCount, uint32 vertexSize)
+		inline void checkState(Effect _effect, uint32 quadIndexedVertexCount, uint32 quadUnindexedVertexCount, uint32 vertexSize)
 		{
-			if (effect != _effect && vertexCount)
+			if (effect != _effect)
 				Flush();
 			else if (vertexCount + (quadIndexationEnabled ? quadIndexedVertexCount : quadUnindexedVertexCount) > vertexBufferSize / vertexSize)
 				Flush();
@@ -396,10 +434,15 @@ namespace Render2D
 						device->DrawIndexed((VertexColor*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
 						break;
 					case Effect::Tex:
-						device->DrawIndexed((VertexTex*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
+						device->SetTexture(currentTexture);
+						device->DrawIndexed((VertexTexture*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
 						break;
 					case Effect::Ellipse:
 						device->DrawIndexed((VertexEllipse*) vertexBuffer, vertexCount, vertexCount / 4 * 6);
+						break;
+					case Effect::TexColor:
+						device->SetTexture(currentTexture);
+						device->DrawIndexed((VertexTexColor*)vertexBuffer, vertexCount, vertexCount / 4 * 6);
 						break;
 					}
 				}
@@ -411,10 +454,15 @@ namespace Render2D
 						device->Draw((VertexColor*) vertexBuffer, vertexCount);
 						break;
 					case Effect::Tex:
-						device->Draw((VertexTex*) vertexBuffer, vertexCount);
+						device->SetTexture(currentTexture);
+						device->Draw((VertexTexture*) vertexBuffer, vertexCount);
 						break;
 					case Effect::Ellipse:
 						device->Draw((VertexEllipse*) vertexBuffer, vertexCount);
+						break;
+					case Effect::TexColor:
+						device->SetTexture(currentTexture);
+						device->Draw((VertexTexColor*)vertexBuffer, vertexCount);
 						break;
 					}
 				}
@@ -422,7 +470,7 @@ namespace Render2D
 			}
 		}
 
-		inline void PushRectangle(const rectf32& rect, coloru32 color)
+		inline void PushRectangle(const rectf32& rect, Color color)
 		{
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
 			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
@@ -445,7 +493,7 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushGradientRect(const rectf32& rect, coloru32 color1, coloru32 color2, GradientType gradientType)
+		inline void PushGradientRect(const rectf32& rect, Color color1, Color color2, GradientType gradientType)
 		{
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
 			VertexColor* vb = (VertexColor*) vertexBuffer + vertexCount;
@@ -491,7 +539,7 @@ namespace Render2D
 				}
 			}
 		}
-		inline void PushGradientEllipse(const rectf32& rect, coloru32 innerColor, coloru32 outerColor, float innerRadius = -0.0f, float outerRadius = 1.0f)
+		inline void PushGradientEllipse(const rectf32& rect, Color innerColor, Color outerColor, float32 innerRadius = -0.0f, float32 outerRadius = 1.0f)
 		{
 			checkState(Effect::Ellipse, 4, 6, sizeof(VertexEllipse));
 			VertexEllipse* vb = (VertexEllipse*) vertexBuffer + vertexCount;
@@ -514,29 +562,28 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushEllipse(const rectf32& rect, coloru32 color, float innerRadius = -0.0f, float outerRadius = 1.0f)
+		inline void PushEllipse(const rectf32& rect, Color color, float32 innerRadius = -0.0f, float32 outerRadius = 1.0f)
 		{
 			PushGradientEllipse(rect, color, color, innerRadius, outerRadius);
 		}
-		inline void PushCircleAA(float32x2 center, float radius, coloru32 color, float innerRadius = -0.0f)
+		inline void PushCircleAA(float32x2 center, float32 radius, Color color, float32 innerRadius = -0.0f)
 		{
-			float halfPixel = device->GetAAPixelSize() / 2.0f;
-			float halfPixelByRadius = halfPixel / (radius + halfPixel);
+			float32 halfPixel = device->GetAAPixelSize() / 2.0f;
+			float32 halfPixelByRadius = halfPixel / (radius + halfPixel);
 			rectf32 rect = circle(center, radius + halfPixel);
-			coloru32 tansparentColor(color.rgba, uint8(0));
 			if (innerRadius > 0.0f)
 			{
 				innerRadius *= radius / (radius + halfPixel);
-				PushGradientEllipse(rect, tansparentColor, color, innerRadius - halfPixelByRadius, innerRadius + halfPixelByRadius);
+				PushGradientEllipse(rect, Color(color, 0), color, innerRadius - halfPixelByRadius, innerRadius + halfPixelByRadius);
 				PushGradientEllipse(rect, color, color, innerRadius + halfPixelByRadius, 1.0f - halfPixelByRadius * 2.0f);
 			}
 			else
 			{
 				PushGradientEllipse(rect, color, color, -0.0f, 1.0f - halfPixelByRadius * 2.0f);
 			}
-			PushGradientEllipse(rect, color, tansparentColor, 1.0f - halfPixelByRadius * 2.0f, 1.0f);
+			PushGradientEllipse(rect, color, Color(color, 0), 1.0f - halfPixelByRadius * 2.0f, 1.0f);
 		}
-		inline void PushLineAligned(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, GradientType gradientType)
+		inline void PushLineAligned(float32x2 begin, float32x2 end, float32 width, Color color1, Color color2, GradientType gradientType)
 		{
 			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
@@ -585,7 +632,7 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushLineAligned(float32x2 begin, float32x2 end, float width, coloru32 color)
+		inline void PushLineAligned(float32x2 begin, float32x2 end, float32 width, Color color)
 		{
 			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
@@ -609,7 +656,7 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushLine(float32x2 begin, float32x2 end, float width, coloru32 color1, coloru32 color2, GradientType gradientType)
+		inline void PushLine(float32x2 begin, float32x2 end, float32 width, Color color1, Color color2, GradientType gradientType)
 		{
 			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
@@ -658,7 +705,7 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
-		inline void PushLine(float32x2 begin, float32x2 end, float width, coloru32 color)
+		inline void PushLine(float32x2 begin, float32x2 end, float32 width, Color color)
 		{
 			float32x2 v = normal(normalize(end - begin)) * (width / 2.0f);
 			checkState(Effect::Color, 4, 6, sizeof(VertexColor));
@@ -682,6 +729,57 @@ namespace Render2D
 				vertexCount += 6;
 			}
 		}
+
+		inline void PushText(MonospaceFont* font, float32x2 position, float32 height, char *string, uint32 length = uint32(-1), Color color = 0xffffffff)
+		{
+			if (!quadIndexationEnabled)
+				return;
+			if (effect != Effect::TexColor || currentTexture != font)
+			{
+				Flush();
+				effect = Effect::TexColor;
+				currentTexture = font;
+			}
+			float32 charWidth = height * font->GetAspect();
+			float32 leftBorder = position.x;
+			for (uint32 i = 0; i < length; i++)
+			{
+				uint8 character = string[i];
+				if (!character)
+					break;
+				if (character == ' ')
+				{
+					position.x += charWidth;
+					continue;
+				}
+				if (character == '\n')
+				{
+					position.y += height;
+					position.x = leftBorder;
+					continue;
+				}
+				if (character >= MonospaceFont::firstCharCode)
+				{
+					character -= MonospaceFont::firstCharCode;
+					if (vertexCount + 4 > vertexBufferSize / sizeof(VertexTexColor))
+						Flush();
+					VertexTexColor* vb = (VertexTexColor*)vertexBuffer + vertexCount;
+					float32 charTexCoord = MonospaceFont::tableCharWidth * float32(character);
+					vb[0].set(position, float32x2(charTexCoord, 0.0f), color);
+					vb[3].set(float32x2(position.x, position.y + height), float32x2(charTexCoord, 1.0f), color);
+					position.x += charWidth;
+					charTexCoord += MonospaceFont::tableCharWidth;
+					vb[1].set(position, float32x2(charTexCoord, 0.0f), color);
+					vb[2].set(float32x2(position.x, position.y + height), float32x2(charTexCoord, 1.0f), color);
+					vertexCount += 4;
+				}
+			}
+		}
+		inline void PushText(MonospaceFont* font, float32x2 position, char *string, uint32 length = uint32(-1), Color color = 0xffffffff)
+		{
+			PushText(font, position, font->GetHeight(), string, length, color);
+		}
+
 		inline void SetQuadIndexationState(bool state)
 		{
 			if (state != quadIndexationEnabled)
@@ -692,10 +790,5 @@ namespace Render2D
 		}
 
 		inline Device* GetDevice() { return device; }
-	};
-
-	class TextBatch : public INoncopyable
-	{
-
 	};
 }

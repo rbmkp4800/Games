@@ -10,15 +10,15 @@
 #include <math.h>
 #endif
 
-inline float length(const float32x2& v)
+inline float32 length(const float32x2& v)
 {
 	return sqrtf(v.x * v.x + v.y * v.y);
 }
-inline float length(const float32x3& v)
+inline float32 length(const float32x3& v)
 {
 	return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
-inline float length(const float32x4& v)
+inline float32 length(const float32x4& v)
 {
 	return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 }

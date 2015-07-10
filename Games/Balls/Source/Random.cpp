@@ -16,9 +16,9 @@ bool Random::GetBool()
 {
 	return rand() % 2 ? true : false;
 }
-float Random::GetFloat(float mod)
+float32 Random::GetFloat32(float32 mod)
 {
-	return float(rand()) / float(RAND_MAX) * mod;
+	return float32(rand()) / float32(RAND_MAX) * mod;
 }
 uint32 Random::GetUint32(uint32 mod)
 {

@@ -5,18 +5,25 @@
 using namespace BallsGame;
 using namespace Render2D;
 
-static const float blursSpawnDistance = 1.5f;
+constexpr float32 blursSpawnDistance = 1.5f;
+constexpr uint32 backgroundColor = 0x00003f_rgb;
+constexpr uint32 foregroundFarColor = Colors::DarkBlue;
+constexpr uint32 foregroundNearColor = 0x3399ff_rgb;
+
+//constexpr uint32 backgroundColor = 0x003f00_rgb;
+//constexpr uint32 foregroundFarColor = Colors::DarkGreen;
+//constexpr uint32 foregroundNearColor = 0x00c000_rgb;
 
 void Background::spawnBlurs()
 {
 	while (nextBlurSpawnDelta <= 0.0f)
 	{
-		float depth = 0.3f + Random::GetFloat(0.7f);
-		float radius = (0.3f + Random::GetFloat(0.8f)) / (depth * 5.0f + 1.0f);
+		float32 depth = 0.3f + Random::GetFloat32(0.7f);
+		float32 radius = (0.3f + Random::GetFloat32(0.8f)) / (depth * 5.0f + 1.0f);
 
-		blursList.Insert(BlurDesc(float32x2(Random::GetFloat(radius * 3.0f + 1.5f) - radius * 1.5f,
+		blursList.Insert(BlurDesc(float32x2(Random::GetFloat32(radius * 3.0f + 1.5f) - radius * 1.5f,
 			nextBlurSpawnDelta + blursSpawnDistance), depth, radius));
-		nextBlurSpawnDelta += Random::GetFloat(0.3f);
+		nextBlurSpawnDelta += Random::GetFloat32(0.3f);
 	}
 }
 
@@ -26,12 +33,12 @@ void Background::Initialize()
 	spawnBlurs();
 }
 
-void Background::UpdateAndDraw(float posDelta, float cameraDelta, Batch* batch)
+void Background::UpdateAndDraw(float32 posDelta, float32 cameraDelta, Batch* batch)
 {
 	nextBlurSpawnDelta += posDelta;
 	spawnBlurs();
 
-	batch->GetDevice()->Clear(0xff400000);
+	batch->GetDevice()->Clear(backgroundColor);
 
 	StaticListEnumerator enumerator = blursList.GetFrontEnum();
 	while (blursList.EnumIsValid(enumerator))
@@ -43,14 +50,13 @@ void Background::UpdateAndDraw(float posDelta, float cameraDelta, Batch* batch)
 			continue;
 		}
 
-		coloru32 color = Render2D::lerp(coloru32(colors::darkBlue), coloru32(0xffFF9933), sqrval(desc.depth));
+		Color color = Render2D::lerp(foregroundFarColor, foregroundNearColor, sqrval(desc.depth));
 		desc.position.y += posDelta * (desc.depth * 0.7f + 0.2f);
 		rectf32 circleRect = circle(desc.position, desc.radius);
-		coloru32 innerColor(color.rgba, uint8(224));
-		coloru32 outerColor(color.rgba, uint8(0));
-		float focus = desc.depth * 0.9f;
+		Color innerColor(color, 224);
+		float32 focus = desc.depth * 0.7f;
 		batch->PushEllipse(circleRect, innerColor, -0.0f, focus);
-		batch->PushGradientEllipse(circleRect, innerColor, outerColor, focus);
+		batch->PushGradientEllipse(circleRect, innerColor, Color(color, 0), focus);
 		//batch->PushEllipse(circleRect, colors::white, 0.95, 1.0f);
 
 		blursList.Enumerate(enumerator);

@@ -7,7 +7,7 @@
 
 namespace BallsGame
 {
-	static const float hellDistance = -2.0f;
+	constexpr float32 hellDistance = -2.0f;
 
 	enum class Charge : uint8
 	{
@@ -19,7 +19,7 @@ namespace BallsGame
 	struct PlayerBall
 	{
 		float32x2 position, speed;
-		float radius;
+		float32 radius;
 	};
 
 	class GameObject abstract
@@ -29,64 +29,64 @@ namespace BallsGame
 
 	public:
 		inline float32x2 GetPosition() { return position; }
-		inline void Move(float posDelta) { position.y += posDelta; }
+		inline void Move(float32 posDelta) { position.y += posDelta; }
 	};
 
 	class StaticBall : public GameObject
 	{
 	private:
-		float radius;
+		float32 radius;
 		Charge charge;
 
 	public:
 		StaticBall() = default;
-		inline StaticBall(float x, float y, float _radius, Charge _charge) : radius(_radius), charge(_charge) { position.set(x, y); }
+		inline StaticBall(float32 x, float32 y, float32 _radius, Charge _charge) : radius(_radius), charge(_charge) { position.set(x, y); }
 
-		float GetPlayerBallCollisionDistance(PlayerBall& playerBall, const float32x2& translation, float translationLength);
-		void CollideWithPlayerBall(float collisionDistance, PlayerBall& playerBall, float32x2& translation, float translationLength);
-		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float playerBallCharge);
-		void DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge);
+		float32 GetPlayerBallCollisionDistance(PlayerBall& playerBall, const float32x2& translation, float32 translationLength);
+		void CollideWithPlayerBall(float32 collisionDistance, PlayerBall& playerBall, float32x2& translation, float32 translationLength);
+		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float32 playerBallCharge);
+		void DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float32 playerBallCharge);
 		void Draw(Render2D::Batch* batch);
 	};
 
 	class Field
 	{
 	private:
-		static const uint32 staticBallsLimit = 64;
+		static constexpr uint32 staticBallsLimit = 64;
 		StaticCyclicQueue<StaticBall, staticBallsLimit> staticBallsQueue;
 
-		float nextStaticBallsGroupSpawnDelta;
+		float32 nextStaticBallsGroupSpawnDelta;
 		Charge nextStaticBallGroupCharge;
 
 		void spawnGameObjects();
 
 	public:
 		void Initialize();
-		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float playerBallCharge);
+		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float32 playerBallCharge);
 		void CollideWithPlayerBall(PlayerBall& playerBall, float32x2 translation);
-		void UpdateAndDraw(float posDelta, Render2D::Batch* batch, const PlayerBall& playerBall, float playerBallCharge);
+		void UpdateAndDraw(float32 posDelta, Render2D::Batch* batch, const PlayerBall& playerBall, float32 playerBallCharge);
 	};
 
 	class Background
 	{
 	private:
-		static const uint32 blursLimit = 64;
+		static constexpr uint32 blursLimit = 64;
 		struct BlurDesc
 		{
 			float32x2 position;
-			float depth, radius;
+			float32 depth, radius;
 			BlurDesc() = default;
-			inline BlurDesc(float32x2 _position, float _depth, float _radius) : position(_position), depth(_depth), radius(_radius) {}
+			inline BlurDesc(float32x2 _position, float32 _depth, float32 _radius) : position(_position), depth(_depth), radius(_radius) {}
 		};
 		friend bool operator > (const BlurDesc& a, const BlurDesc& b);
 		StaticOrderedList<BlurDesc, blursLimit> blursList;
-		float nextBlurSpawnDelta;
+		float32 nextBlurSpawnDelta;
 		void spawnBlurs();
 
 	public:
 		inline Background() : nextBlurSpawnDelta(0.0f) {}
 		void Initialize();
-		void UpdateAndDraw(float posDelta, float cameraDelta, Render2D::Batch* batch);
+		void UpdateAndDraw(float32 posDelta, float32 cameraDelta, Render2D::Batch* batch);
 	};
 	inline bool operator > (const Background::BlurDesc& a, const Background::BlurDesc& b)
 	{
@@ -96,34 +96,29 @@ namespace BallsGame
 	class Hell
 	{
 	private:
-		static const uint32 blursLimit = 64;
+		static constexpr uint32 blursLimit = 64;
 		struct BlurDesc
 		{
 			float32x2 position;
-			float radius, lifeTime;
+			float32 radius, lifeTime;
 			BlurDesc() = default;
-			inline BlurDesc(float32x2 _position, float _radius, float _lifeTime) : position(_position), radius(_radius), lifeTime(_lifeTime) {}
+			inline BlurDesc(float32x2 _position, float32 _radius, float32 _lifeTime) : position(_position), radius(_radius), lifeTime(_lifeTime) {}
 		};
 		StaticCyclicQueue<BlurDesc, blursLimit> blursQueue;
-		float nextBlurSpawnDelta;
+		float32 nextBlurSpawnDelta;
 		void spawnBlurs();
 
-		float distance;
+		float32 distance;
 
 	public:
 		void Initialize();
-		void UpdateAndDraw(float posDelta, float timeDelta, Render2D::Batch* batch);
+		void UpdateAndDraw(float32 posDelta, float32 timeDelta, Render2D::Batch* batch);
 	};
 
 	enum class PlayerControl
 	{
-		None = 0,
-		Left = 1,
-		Right = 2,
-		Up = 3,
-		Down = 4,
-		PositiveCharge = 5,
-		NegativeCharge = 6,
+		None, Left, Right, Up, Down,
+		PositiveCharge, NegativeCharge, Jump,
 	};
 
 	class Game
@@ -136,10 +131,10 @@ namespace BallsGame
 
 		struct
 		{
-			bool left, right, up, down, positiveCharge, negativeCharge;
+			bool left, right, up, down, positiveCharge, negativeCharge, jump;
 		} controls;
-		float aspect, cameraDelta;
-		float64 globalPosition;
+		float32 aspect, cameraDelta;
+		float32 globalPosition, maxGlobalPosition;
 
 		static Render2D::Device device;
 		Render2D::SwapChain swapChain;
@@ -147,10 +142,9 @@ namespace BallsGame
 
 	public:
 		bool Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY);
-		void Update(float timeDelta);
-
-		void SetPlayerControlState(PlayerControl playerControl, bool state);
 		void ResizeOutput(uint32 x, uint32 y);
+		void Update(float32 timeDelta);
+		void SetPlayerControlState(PlayerControl playerControl, bool state);
 		void Restart();
 	};
 }

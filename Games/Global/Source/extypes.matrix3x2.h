@@ -12,7 +12,7 @@
 
 struct matrix3x2
 {
-	float data[3][2];
+	float32 data[3][2];
 
 	inline void clear()
 	{
@@ -32,7 +32,7 @@ struct matrix3x2
 		data[2][0] = 0.0f;
 		data[2][1] = 0.0f;
 	}
-	inline void setAsTranslation(float x, float y)
+	inline void setAsTranslation(float32 x, float32 y)
 	{
 		data[0][0] = 1.0f;
 		data[0][1] = 0.0f;
@@ -41,7 +41,7 @@ struct matrix3x2
 		data[2][0] = x;
 		data[2][1] = y;
 	}
-	inline void setAsScale(float scale)
+	inline void setAsScale(float32 scale)
 	{
 		data[0][0] = scale;
 		data[0][1] = 0.0f;
@@ -50,7 +50,7 @@ struct matrix3x2
 		data[2][0] = 0.0f;
 		data[2][1] = 0.0f;
 	}
-	inline void setAsScale(float xscale, float yscale)
+	inline void setAsScale(float32 xscale, float32 yscale)
 	{
 		data[0][0] = xscale;
 		data[0][1] = 0.0f;
@@ -59,7 +59,7 @@ struct matrix3x2
 		data[2][0] = 0.0f;
 		data[2][1] = 0.0f;
 	}
-	inline void setAsScale(float xs, float ys, float x, float y)
+	inline void setAsScale(float32 xs, float32 ys, float32 x, float32 y)
 	{
 		data[0][0] = xs;
 		data[0][1] = 0.0f;
@@ -68,7 +68,7 @@ struct matrix3x2
 		data[2][0] = x * (1.0f - xs);
 		data[2][1] = y * (1.0f - ys);
 	}
-	inline void setAsTranslationAndScale(float xtrans, float ytrans, float xscale, float yscale)
+	inline void setAsTranslationAndScale(float32 xtrans, float32 ytrans, float32 xscale, float32 yscale)
 	{
 		data[0][0] = xscale;
 		data[0][1] = 0.0f;
@@ -77,10 +77,10 @@ struct matrix3x2
 		data[2][0] = xtrans;
 		data[2][1] = ytrans;
 	}
-	inline void setAsRotation(float angle)
+	inline void setAsRotation(float32 angle)
 	{
-		float a = cosf(angle);
-		float b = sinf(angle);
+		float32 a = cosf(angle);
+		float32 b = sinf(angle);
 		data[0][0] = a;
 		data[0][1] = -b;
 		data[1][0] = b;
@@ -88,10 +88,10 @@ struct matrix3x2
 		data[2][0] = 0.0f;
 		data[2][1] = 0.0f;
 	}
-	inline void setAsRotation(float x, float y, float angle)
+	inline void setAsRotation(float32 x, float32 y, float32 angle)
 	{
-		float a = cosf(angle);
-		float b = sinf(angle);
+		float32 a = cosf(angle);
+		float32 b = sinf(angle);
 		data[0][0] = a;
 		data[0][1] = -b;
 		data[1][0] = b;
@@ -117,11 +117,11 @@ struct matrix3x2
 		data[2][0] = 0.0f;
 		data[2][1] = 0.0f;
 	}
-	inline void setAsReflection(float x, float y)
+	inline void setAsReflection(float32 x, float32 y)
 	{
-		float d = sqrval(x) + sqrval(y);
-		float m = 2.0f * x * y / d;
-		float s = (sqrval(x) - sqrval(y)) / d;
+		float32 d = sqrval(x) + sqrval(y);
+		float32 m = 2.0f * x * y / d;
+		float32 s = (sqrval(x) - sqrval(y)) / d;
 
 		data[0][0] = s;
 		data[0][1] = m;
@@ -143,7 +143,7 @@ struct matrix3x2
 	{
 		setAsScale(scale.x, scale.y, position.x, position.y);
 	}
-	inline void setAsRotation(float32x2 position, float angle)
+	inline void setAsRotation(float32x2 position, float32 angle)
 	{
 		setAsRotation(position.x, position.y, angle);
 	}
@@ -158,7 +158,7 @@ struct matrix3x2
 		matrix.setAsIdentity();
 		return matrix;
 	}
-	static inline matrix3x2 translation(float x, float y)
+	static inline matrix3x2 translation(float32 x, float32 y)
 	{
 		matrix3x2 result;
 		result.setAsTranslation(x, y);
@@ -170,13 +170,13 @@ struct matrix3x2
 		result.setAsTranslation(translation);
 		return result;
 	}
-	static inline matrix3x2 scale(float scale)
+	static inline matrix3x2 scale(float32 scale)
 	{
 		matrix3x2 matrix;
 		matrix.setAsScale(scale);
 		return matrix;
 	}
-	static inline matrix3x2 scale(float x, float y)
+	static inline matrix3x2 scale(float32 x, float32 y)
 	{
 		matrix3x2 matrix;
 		matrix.setAsScale(x, y);
@@ -188,25 +188,25 @@ struct matrix3x2
 		matrix.setAsScale(scale);
 		return matrix;
 	}
-	static inline matrix3x2 translationAndScale(float xtrans, float ytrans, float xscale, float yscale)
+	static inline matrix3x2 translationAndScale(float32 xtrans, float32 ytrans, float32 xscale, float32 yscale)
 	{
 		matrix3x2 matrix;
 		matrix.setAsTranslationAndScale(xtrans, ytrans, xscale, yscale);
 		return matrix;
 	}
-	static inline matrix3x2 rotation(float angle)
+	static inline matrix3x2 rotation(float32 angle)
 	{
 		matrix3x2 matrix;
 		matrix.setAsRotation(angle);
 		return matrix;
 	}
-	static inline matrix3x2 rotation(float x, float y, float angle)
+	static inline matrix3x2 rotation(float32 x, float32 y, float32 angle)
 	{
 		matrix3x2 matrix;
 		matrix.setAsRotation(x, y, angle);
 		return matrix;
 	}
-	static inline matrix3x2 rotation(float32x2 position, float angle)
+	static inline matrix3x2 rotation(float32x2 position, float32 angle)
 	{
 		matrix3x2 matrix;
 		matrix.setAsRotation(position, angle);
@@ -224,7 +224,7 @@ struct matrix3x2
 		matrix.setAsHorizontalReflection();
 		return matrix;
 	}
-	static inline matrix3x2 reflection(float x, float y)
+	static inline matrix3x2 reflection(float32 x, float32 y)
 	{
 		matrix3x2 matrix;
 		matrix.setAsReflection(x, y);

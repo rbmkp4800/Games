@@ -1,40 +1,45 @@
 #include "BallsGame.h"
 
 #include "Random.h"
+#include "Timer.h"
 
 #include <extypes.matrix3x2.h>
+
 #include <memory.h>
+#include <stdio.h>
 
 using namespace Render2D;
 using namespace BallsGame;
 
 Device Game::device;
 
-static const float playerBallDefaultRadius = 0.06f;
-static const float playerBallDefaultOutputVerticalPos = 0.4f;
-static const float playerBallControlsAccel = 2.0f;
-static const float playerBallControlsDefaultCharge = 0.1f;
-static const float cameraDeltaDecreaseExponentCoef = 0.2f;
-static const float cameraDeltaCoef = 0.5f;
-static const float gravityAccel = -0.4f;
+constexpr float32 playerBallDefaultRadius = 0.05f;
+constexpr float32 playerBallDefaultOutputVerticalPos = 0.4f;
+constexpr float32 playerBallControlsAccel = 2.0f;
+constexpr float32 playerBallControlsDefaultCharge = 0.1f;
+constexpr float32 cameraDeltaDecreaseExponentCoef = 0.2f;
+constexpr float32 cameraDeltaCoef = 0.5f;
+constexpr float32 gravityAccel = -0.4f;
 
 bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 {
+	Timer::Initialize();
+
 	if (!device.IsInitialized())
 		device.Create();
 	if (!swapChain.CreateForHWnd(&device, outputHWnd, outputSizeX, outputSizeY))
 		return false;
 	device.SetTarget(&swapChain);
 
-	Random::Seed(2);
 	field.Initialize();
 	background.Initialize();
 	hell.Initialize();
 
 	outputSize.set(outputSizeX, outputSizeY);
-	aspect = float(outputSizeX) / float(outputSizeY);
+	aspect = float32(outputSizeX) / float32(outputSizeY);
 	cameraDelta = 0.0f;
-	globalPosition = 0.0;
+	globalPosition = 0.0f;
+	maxGlobalPosition = 0.0f;
 
 	memset(&controls, 0, sizeof(controls));
 	playerBall.position.set(0.5f, 0.0f);
@@ -44,24 +49,25 @@ bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 	return true;
 }
 
-inline matrix3x2 translationScaleTranslation(float xtrans1, float ytrans1, float xscale, float yscale, float xtrans2, float ytrans2)
+void BallsGame::Game::ResizeOutput(uint32 x, uint32 y)
 {
-	matrix3x2 matrix;
-	matrix.data[0][0] = xscale;
-	matrix.data[0][1] = 0.0f;
-	matrix.data[1][0] = 0.0f;
-	matrix.data[1][1] = yscale;
-	matrix.data[2][0] = xtrans1 + xtrans2 * xscale;
-	matrix.data[2][1] = ytrans1 + ytrans2 * yscale;
-	return matrix;
+	if (device.IsInitialized())
+	{
+		device.ResetTarget();
+		swapChain.Resize(&device, x, y);
+		device.SetTarget(&swapChain);
+
+		outputSize.set(x, y);
+		aspect = float32(x) / float32(y);
+	}
 }
 
-void Game::Update(float timeDelta)
+void Game::Update(float32 timeDelta)
 {
-	frameid++;
+	TimerRecord frameStartRecord = Timer::GetRecord();
 
 	float32x2 acceleration(0.0f, gravityAccel);
-	float playerBallCharge = 0.0f;
+	float32 playerBallCharge = 0.0f;
 
 	if (controls.left)
 		acceleration.x -= playerBallControlsAccel;
@@ -75,40 +81,53 @@ void Game::Update(float timeDelta)
 		playerBallCharge += playerBallControlsDefaultCharge;
 	if (controls.negativeCharge && !controls.positiveCharge)
 		playerBallCharge -= playerBallControlsDefaultCharge;
+	if (controls.jump)
+	{
+		playerBall.speed.y += 1.0f; controls.jump = false;
+	}
 
 	acceleration += field.GetForceAppliedToPlayerBall(playerBall, playerBallCharge);
 
-	float32x2 translation = (playerBall.speed + acceleration * timeDelta / 2.0f) * timeDelta;
+	float32x2 translation = (playerBall.speed + acceleration * (timeDelta / 2.0f)) * timeDelta;
 	playerBall.speed += acceleration * timeDelta;
 	field.CollideWithPlayerBall(playerBall, translation);
-	float posDelta = playerBall.position.y;
+	float32 posDelta = playerBall.position.y;
 	playerBall.position.y = 0.0f;
-	globalPosition += float64(posDelta);
+	globalPosition += posDelta;
+	if (globalPosition > maxGlobalPosition)
+		maxGlobalPosition = globalPosition;
 
-	float cameraDeltaDecreaseCoef = powf(cameraDeltaDecreaseExponentCoef, timeDelta);
-	float cameraFullDelta = cameraDeltaCoef * playerBall.speed.y;
+	float32 cameraDeltaDecreaseCoef = powf(cameraDeltaDecreaseExponentCoef, timeDelta);
+	float32 cameraFullDelta = cameraDeltaCoef * playerBall.speed.y;
 	cameraDelta = (cameraDelta - cameraFullDelta) * cameraDeltaDecreaseCoef + cameraFullDelta;
+
+	/*device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f * a, 2.0f * aspect * a,
+		0.0f, playerBallDefaultOutputVerticalPos / aspect), 1.0f / float32(outputSize.x));*/
+	device.SetTransform(matrix3x2::scale(2.0f, 2.0f * aspect) * matrix3x2::translation(-0.5f, 0.0f), 1.0f / float32(outputSize.x));
 
 	LocalMemoryBuffer<Device::defaultVertexBufferSize> buffer;
 	Batch batch(&device, buffer.GetPointer(), buffer.GetSize());
-
-	device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f, 2.0f * aspect,
-		0.0f, playerBallDefaultOutputVerticalPos / aspect), 1.0f / float(outputSize.x));
-
 	background.UpdateAndDraw(-posDelta, cameraDelta, &batch);
 	field.UpdateAndDraw(-posDelta, &batch, playerBall, playerBallCharge);
+	batch.PushCircleAA(playerBall.position, playerBall.radius * 0.85f, Colors::White);
+	batch.PushCircleAA(playerBall.position, playerBall.radius, Colors::White, 0.92f);
+	batch.PushLine(playerBall.position, playerBall.position + playerBall.speed, 0.005f, Colors::Red);
 	hell.UpdateAndDraw(-posDelta, timeDelta, &batch);
-
-	batch.PushCircleAA(playerBall.position, playerBall.radius * 0.85f, colors::white);
-	batch.PushCircleAA(playerBall.position, playerBall.radius, colors::white, 0.92f);
-	//batch.PushLine(playerBall.position, playerBall.position + playerBall.speed, 0.005f, colors::red);
-	//batch.PushCircleAA(playerBall.position, playerBall.radius, colors::white);
 	batch.Flush();
 
 	device.SetTransform(matrix3x2::identity());
-	batch.PushGradientEllipse(rectf32(-2.5f, -2.2f, 2.5f, 2.0f),
-		colors::transparent, coloru32(colors::black), 0.45f, 0.75f);
-	batch.PushGradientRect(rectf32(-1.0f, -1.0f, 1.0f, -0.85f), coloru32(0, uint8(0)), coloru32(0, uint8(196)), GradientType::Vertical);
+	batch.PushGradientEllipse(rectf32(-2.5f, -2.2f, 2.5f, 2.0f), Color(Colors::Black, 0), Colors::Black, 0.45f, 0.75f);
+	batch.PushGradientRect(rectf32(-1.0f, -1.0f, 1.0f, -0.9f), Color(Colors::Black, 0), Color(Colors::Black, 128), GradientType::Vertical);
+	batch.PushGradientRect(rectf32(-1.0f, 0.9f, 1.0f, 1.0f), Color(Colors::Black, 128), Color(Colors::Black, 0), GradientType::Vertical);
+	batch.Flush();
+
+	TimerRecord frameEndRecord = Timer::GetRecord();
+
+	char infoString[256];
+	sprintf(infoString, "Balls Game by –¡Ã œ4800. Work in progress LOL\nFrame time %.2f ms, global position %.2f/%.2f",
+		Timer::ElapsedTime(frameStartRecord, frameEndRecord) * 1000.0f, globalPosition, maxGlobalPosition);
+	device.SetDirectTransform();
+	batch.PushText(device.GetDefaultFont(), float32x2(5.0f, 5.0f), infoString);
 	batch.Flush();
 
 	swapChain.Present();
@@ -136,7 +155,8 @@ void Game::SetPlayerControlState(PlayerControl playerControl, bool state)
 	case PlayerControl::NegativeCharge:
 		controls.negativeCharge = state;
 		break;
+	case PlayerControl::Jump:
+		if (state) controls.jump = true;
+		break;
 	}
 }
-
-uint32 frameid = 0;

@@ -7,6 +7,7 @@
     <ClInclude Include="Source\Render2D.h" />
     <ClInclude Include="Source\D3DHelper.h" />
     <ClInclude Include="Source\DXGIHelper.h" />
+    <ClInclude Include="Source\DefaultFont.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Source\Shaders\vsColor.hlsl" />
@@ -15,5 +16,7 @@
     <FxCompile Include="Source\Shaders\psColor.hlsl" />
     <FxCompile Include="Source\Shaders\psTex.hlsl" />
     <FxCompile Include="Source\Shaders\psEllipse.hlsl" />
+    <FxCompile Include="Source\Shaders\vsTexColor.hlsl" />
+    <FxCompile Include="Source\Shaders\psTexColor.hlsl" />
   </ItemGroup>
 </Project>

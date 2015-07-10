@@ -34,6 +34,10 @@ inline void SetGameControlsStateByKeyCode(uint32 keycode, bool state)
 		game.SetPlayerControlState(PlayerControl::Down, state);
 		break;
 
+	case VK_SPACE:
+		game.SetPlayerControlState(PlayerControl::Jump, state);
+		break;
+
 	case 'R':
 		//Game::Restart();
 		break;
@@ -54,6 +58,10 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		break;
+
+	case WM_SIZE:
+		game.ResizeOutput(LOWORD(lParam), HIWORD(lParam));
 		break;
 
 	default:
@@ -86,17 +94,17 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdS
 	HWND hWnd = CreateWindow(wndClass, L"Balls Game", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
 		640, 1024, nullptr, nullptr, hInstance, nullptr);
 
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+
 	RECT clientRect = { 0 };
 	GetClientRect(hWnd, &clientRect);
 	game.Create(hWnd, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
 
-	ShowWindow(hWnd, nCmdShow);
-	UpdateWindow(hWnd);
-
 	uint64 counterFrequencyU64 = 0, lastTick = 0;
 	QueryPerformanceFrequency(PLARGE_INTEGER(&counterFrequencyU64));
 	QueryPerformanceCounter(PLARGE_INTEGER(&lastTick));
-	float counterFrequency = float(counterFrequencyU64);
+	float32 counterFrequency = float32(counterFrequencyU64);
 
 	MSG msg = { 0 };
 	do
@@ -110,9 +118,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char* lpCmdLine, int nCmdS
 		{
 			uint64 tick = 0;
 			QueryPerformanceCounter(PLARGE_INTEGER(&tick));
-			game.Update(float(tick - lastTick) / counterFrequency);
+			game.Update(float32(tick - lastTick) / counterFrequency);
 			//game.Update(0.016f);
-			//game.Update(float((rand() % 40) + 1) / 1000.0f);
+			//game.Update(float32((rand() % 40) + 1) / 1000.0f);
 			lastTick = tick;
 		}
 	} while (msg.message != WM_QUIT);

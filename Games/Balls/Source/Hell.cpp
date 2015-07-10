@@ -11,9 +11,8 @@ void Hell::spawnBlurs()
 	{
 		if (blursQueue.IsFull())
 			return;
-
-		blursQueue.PushBack(BlurDesc(float32x2(Random::GetFloat(1.0f), 0.0f), 0.1f + Random::GetFloat(0.2f), 0.8f));
-		nextBlurSpawnDelta -= 0.02f + Random::GetFloat(0.05f);
+		blursQueue.PushBack(BlurDesc(float32x2(Random::GetFloat32(1.0f), 0.0f), 0.1f + Random::GetFloat32(0.2f), 0.8f));
+		nextBlurSpawnDelta -= 0.02f + Random::GetFloat32(0.05f);
 	}
 }
 
@@ -25,7 +24,7 @@ void Hell::Initialize()
 	spawnBlurs();
 }
 
-void Hell::UpdateAndDraw(float posDelta, float timeDelta, Render2D::Batch* batch)
+void Hell::UpdateAndDraw(float32 posDelta, float32 timeDelta, Render2D::Batch* batch)
 {
 	if (timeDelta > 0.1f)
 		timeDelta = 0.1f;
@@ -33,9 +32,9 @@ void Hell::UpdateAndDraw(float posDelta, float timeDelta, Render2D::Batch* batch
 	distance += posDelta;
 	if (distance < hellDistance)
 		distance = hellDistance;
-	batch->PushGradientRect(rectf32(0.0f, distance + 1.0f, 1.0f, distance), coloru32(colors::red, uint8(128)), coloru32(colors::red, uint8(0)), GradientType::Vertical);
-	batch->PushGradientRect(rectf32(0.0f, distance + 0.2f, 1.0f, distance), colors::lightYellow, coloru32(colors::lightYellow, uint8(0)), GradientType::Vertical);
-	batch->PushRectangle(rectf32(0.0f, distance, 1.0f, -10.0f), colors::lightYellow);
+	batch->PushGradientRect(rectf32(0.0f, distance + 1.0f, 1.0f, distance), Color(Colors::Red, 128), Color(Colors::Red, 0), GradientType::Vertical);
+	batch->PushGradientRect(rectf32(0.0f, distance + 0.2f, 1.0f, distance), Colors::LightYellow, Color(Colors::LightYellow, 0), GradientType::Vertical);
+	batch->PushRectangle(rectf32(0.0f, distance, 1.0f, -10.0f), Colors::LightYellow);
 
 	while ((!blursQueue.IsEmpty()) && blursQueue.PeekFront().lifeTime <= 0.0f)
 		blursQueue.PopFront();
@@ -50,7 +49,6 @@ void Hell::UpdateAndDraw(float posDelta, float timeDelta, Render2D::Batch* batch
 		desc.position.y += timeDelta;
 		desc.lifeTime -= timeDelta;
 		rectf32 rect = circle(float32x2(desc.position.x, desc.position.y + distance - 0.15f), desc.radius * (desc.lifeTime + 0.4f));
-		coloru32 color(colors::lightYellow, desc.lifeTime);
-		batch->PushGradientEllipse(rect, color, coloru32(colors::lightYellow, uint8(0)));
+		batch->PushGradientEllipse(rect, Color(Colors::LightYellow, unormFloat32toUint8(saturate(desc.lifeTime))), Color(Colors::LightYellow, 0));
 	}
 }

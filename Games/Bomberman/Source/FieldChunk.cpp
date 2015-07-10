@@ -27,7 +27,7 @@ Field::Field(uint16 x, uint16 y) : dim(x, y), uid(0)
 	srand(4);
 	//srand((uint32)time(nullptr));
 
-	coloru32* floorBackInitData = (coloru32*) blocksMatrix;
+	color* floorBackInitData = (color*) blocksMatrix;
 	for (uint32 i = 0; i < (dim.x / 2) * (dim.y / 2); i++)
 		floorBackInitData[i].set(rand() % 60, rand() % 96 + 80, rand() % 60);
 	Texture floorBackgroundBitmap;

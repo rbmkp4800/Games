@@ -25,19 +25,38 @@ DWORD __stdcall RenderThreadMain(void* args)
 	device.SetTarget(&swapChain);
 
 	float rotation = 0.0f;
+	MonospaceFont* font = device.GetDefaultFont();
+
+	VertexTexColor fontVB[] =
+	{
+		{ float32x2(10.0f, 10.0f), float32x2(0.0f, 0.0f), 0xffffffff },
+		{ float32x2(1794.0f, 10.0f), float32x2(1.0f, 0.0f), 0xffffffff },
+		{ float32x2(1794.0f, 26.0f), float32x2(1.0f, 1.0f), 0xffffffff },
+		{ float32x2(10.0f, 26.0f), float32x2(0.0f, 1.0f), 0xffffffff },
+	};
 
 	for (;;)
 	{
 		LocalMemoryBuffer<1024> buffer;
 		Batch batch(&device, buffer.GetPointer(), buffer.GetSize());
 
-		device.Clear(colors::cornflowerBlue);
-		device.SetTransform(matrix3x2::scale(600.0f / 800.0f, 1.0f) * matrix3x2::rotation(rotation += 0.01f));
-		batch.PushRectangle(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), colors::black);
-		batch.PushGradientEllipse(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), colors::red, coloru32(colors::white, 0.5f), 0.25f, 0.75f);
-		batch.PushGradientEllipse(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), colors::white, colors::yellow, 0.75f, 1.0f);
-		batch.PushRectangle(rectf32(-0.1f, -0.1f, 0.1f, 0.1f), colors::blue);
+		device.Clear(Colors::CornflowerBlue);
+		/*device.SetTransform(matrix3x2::scale(600.0f / 800.0f, 1.0f) * matrix3x2::rotation(rotation += 0.01f));
+		batch.PushRectangle(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), Colors::Black);
+		batch.PushGradientEllipse(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), Colors::Red, Color(Colors::White, 128), 0.25f, 0.75f);
+		batch.PushGradientEllipse(rectf32(-0.5f, -0.5f, 0.5f, 0.5f), Colors::White, Colors::Yellow, 0.75f, 1.0f);
+		batch.PushRectangle(rectf32(-0.1f, -0.1f, 0.1f, 0.1f), Colors::Blue);
+		batch.Flush();*/
+
+		device.SetDirectTransform();
+		//batch.PushRectangle(rectf32(10.0f, 10.0f, 700.0f, 550.0f), Colors::Black);
+		char *str = "Привет кусок говна\nhi fucking fonts!!! LOOOL 228\nПАПИРОСИМ\nXEngine started succesfully\nFPS 123, frame time 0.564 ms\n";
+		batch.PushText(font, float32x2(10.0f, 30.0f), str);
 		batch.Flush();
+
+		device.SetTexture(font);
+		device.DrawIndexed(fontVB, 4, 6);
+
 		swapChain.Present();
 	}
 

@@ -1,4 +1,4 @@
-cbuffer cbScale : register(b0)
+cbuffer CBTransform : register(b0)
 {
 	float3x2 transform;
 }

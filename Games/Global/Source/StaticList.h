@@ -23,7 +23,7 @@ private:
 		Type data;
 		uint32 nextIndex;
 	} buffer[size];
-	BitField32<intdivceil_constexpr(size, 32)> allocBitField;
+	BitField32<intdivceil(size, 32)> allocBitField;
 	uint32 firstNodeIdx;
 
 public:
