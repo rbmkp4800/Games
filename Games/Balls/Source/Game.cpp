@@ -1,9 +1,8 @@
 #include "BallsGame.h"
 
-#include "Random.h"
-#include "Timer.h"
-
 #include <extypes.matrix3x2.h>
+#include <Random.h>
+#include <Timer.h>
 
 #include <memory.h>
 #include <stdio.h>
@@ -13,7 +12,6 @@ using namespace BallsGame;
 
 Device Game::device;
 
-constexpr float32 playerBallDefaultRadius = 0.05f;
 constexpr float32 playerBallDefaultOutputVerticalPos = 0.4f;
 constexpr float32 playerBallControlsAccel = 2.0f;
 constexpr float32 playerBallControlsDefaultCharge = 0.1f;
@@ -42,14 +40,11 @@ bool Game::Create(void* outputHWnd, uint32 outputSizeX, uint32 outputSizeY)
 	maxGlobalPosition = 0.0f;
 
 	memset(&controls, 0, sizeof(controls));
-	playerBall.position.set(0.5f, 0.0f);
-	playerBall.speed.set(0.0f, 1.0f);
-	playerBall.radius = playerBallDefaultRadius;
 
 	return true;
 }
 
-void BallsGame::Game::ResizeOutput(uint32 x, uint32 y)
+void Game::ResizeOutput(uint32 x, uint32 y)
 {
 	if (device.IsInitialized())
 	{
@@ -81,38 +76,33 @@ void Game::Update(float32 timeDelta)
 		playerBallCharge += playerBallControlsDefaultCharge;
 	if (controls.negativeCharge && !controls.positiveCharge)
 		playerBallCharge -= playerBallControlsDefaultCharge;
-	if (controls.jump)
-	{
-		playerBall.speed.y += 1.0f; controls.jump = false;
-	}
 
-	acceleration += field.GetForceAppliedToPlayerBall(playerBall, playerBallCharge);
-
-	float32x2 translation = (playerBall.speed + acceleration * (timeDelta / 2.0f)) * timeDelta;
-	playerBall.speed += acceleration * timeDelta;
-	field.CollideWithPlayerBall(playerBall, translation);
-	float32 posDelta = playerBall.position.y;
-	playerBall.position.y = 0.0f;
+	float32 posDelta = field.Update(timeDelta, acceleration, playerBallCharge);
 	globalPosition += posDelta;
 	if (globalPosition > maxGlobalPosition)
 		maxGlobalPosition = globalPosition;
 
-	float32 cameraDeltaDecreaseCoef = powf(cameraDeltaDecreaseExponentCoef, timeDelta);
+	/*float32 cameraDeltaDecreaseCoef = powf(cameraDeltaDecreaseExponentCoef, timeDelta);
 	float32 cameraFullDelta = cameraDeltaCoef * playerBall.speed.y;
-	cameraDelta = (cameraDelta - cameraFullDelta) * cameraDeltaDecreaseCoef + cameraFullDelta;
+	cameraDelta = (cameraDelta - cameraFullDelta) * cameraDeltaDecreaseCoef + cameraFullDelta;*/
 
 	/*device.SetTransform(translationScaleTranslation(-1.0f, -1.0f, 2.0f * a, 2.0f * aspect * a,
 		0.0f, playerBallDefaultOutputVerticalPos / aspect), 1.0f / float32(outputSize.x));*/
-	device.SetTransform(matrix3x2::scale(2.0f, 2.0f * aspect) * matrix3x2::translation(-0.5f, 0.0f), 1.0f / float32(outputSize.x));
 
 	LocalMemoryBuffer<Device::defaultVertexBufferSize> buffer;
 	Batch batch(&device, buffer.GetPointer(), buffer.GetSize());
-	background.UpdateAndDraw(-posDelta, cameraDelta, &batch);
-	field.UpdateAndDraw(-posDelta, &batch, playerBall, playerBallCharge);
-	batch.PushCircleAA(playerBall.position, playerBall.radius * 0.85f, Colors::White);
-	batch.PushCircleAA(playerBall.position, playerBall.radius, Colors::White, 0.92f);
-	batch.PushLine(playerBall.position, playerBall.position + playerBall.speed, 0.005f, Colors::Red);
-	hell.UpdateAndDraw(-posDelta, timeDelta, &batch);
+
+	device.Clear(0x68C0EC_rgb);
+	device.SetTransform(matrix3x2::identity());
+	batch.PushGradientRect(rectf32(-1.0f, -1.0f, 1.0f, 0.3f), 0x297BA000_rgba, 0x297BA0_rgb, GradientType::Vertical);	//0x68C0EC_rgb
+	batch.Flush();
+
+	device.SetTransform(matrix3x2::scale(2.0f, 2.0f * aspect) * matrix3x2::translation(-0.5f, 0.0f), 1.0f / float32(outputSize.x));
+
+	background.UpdateAndDraw(posDelta, cameraDelta, &batch);
+	field.Draw(&batch);
+	hell.UpdateAndDraw(posDelta, timeDelta, &batch);
+
 	batch.Flush();
 
 	device.SetTransform(matrix3x2::identity());
@@ -124,8 +114,8 @@ void Game::Update(float32 timeDelta)
 	TimerRecord frameEndRecord = Timer::GetRecord();
 
 	char infoString[256];
-	sprintf(infoString, "Balls Game by –¡Ã œ4800. Work in progress LOL\nFrame time %.2f ms, global position %.2f/%.2f",
-		Timer::ElapsedTime(frameStartRecord, frameEndRecord) * 1000.0f, globalPosition, maxGlobalPosition);
+	sprintf(infoString, "Balls Game by –¡Ã œ4800. Work in progress LOL\nOutput size %dx%d. Frame time %.2f ms. Time delta %.2f ms.\nGlobal position %.2f/%.2f\n",
+		outputSize.x, outputSize.y, Timer::ElapsedTime(frameStartRecord, frameEndRecord) * 1000.0f, timeDelta * 1000.0f, globalPosition, maxGlobalPosition);
 	device.SetDirectTransform();
 	batch.PushText(device.GetDefaultFont(), float32x2(5.0f, 5.0f), infoString);
 	batch.Flush();

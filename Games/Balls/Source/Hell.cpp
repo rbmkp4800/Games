@@ -1,6 +1,6 @@
 #include "BallsGame.h"
 
-#include "Random.h"
+#include <Random.h>
 
 using namespace Render2D;
 using namespace BallsGame;
@@ -29,7 +29,7 @@ void Hell::UpdateAndDraw(float32 posDelta, float32 timeDelta, Render2D::Batch* b
 	if (timeDelta > 0.1f)
 		timeDelta = 0.1f;
 
-	distance += posDelta;
+	distance -= posDelta;
 	if (distance < hellDistance)
 		distance = hellDistance;
 	batch->PushGradientRect(rectf32(0.0f, distance + 1.0f, 1.0f, distance), Color(Colors::Red, 128), Color(Colors::Red, 0), GradientType::Vertical);

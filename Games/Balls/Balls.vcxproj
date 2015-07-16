@@ -52,12 +52,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Global\Source;$(SolutionDir)Render2D\Source;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ExLib\Source;$(SolutionDir)Render2D\Source;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -69,6 +68,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)ExLib\Source;$(SolutionDir)Render2D\Source;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -79,8 +79,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\BallsGame.h" />
-    <ClInclude Include="Source\Random.h" />
-    <ClInclude Include="Source\Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Background.cpp" />
@@ -88,11 +86,12 @@
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameObjects.cpp" />
     <ClCompile Include="Source\Hell.cpp" />
-    <ClCompile Include="Source\Random.cpp" />
-    <ClCompile Include="Source\Timer.cpp" />
     <ClCompile Include="Source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ExLib\ExLib.vcxproj">
+      <Project>{a269d683-08b6-4313-91db-7b6f2e2a5961}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\Render2D\Render2D.vcxproj">
       <Project>{2d9b820f-bc95-4cb2-9222-3574f25f55bd}</Project>
       <Private>true</Private>

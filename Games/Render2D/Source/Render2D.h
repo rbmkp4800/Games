@@ -96,6 +96,7 @@ namespace Render2D
 			LightSalmon =	0xffa07a_rgb,
 			LightSkyBlue =	0x87cefa_rgb,
 			SkyBlue =		0x87ceeb_rgb,
+			DeepSkyBlue =	0x00bfff_rgb,
 
 			Gray =			0x7f7f7f_rgb,
 			LightGray =		0xc0c0c0_rgb,

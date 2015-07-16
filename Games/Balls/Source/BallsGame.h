@@ -20,6 +20,7 @@ namespace BallsGame
 	{
 		float32x2 position, speed;
 		float32 radius;
+		float32 charge;
 	};
 
 	class GameObject abstract
@@ -29,7 +30,7 @@ namespace BallsGame
 
 	public:
 		inline float32x2 GetPosition() { return position; }
-		inline void Move(float32 posDelta) { position.y += posDelta; }
+		inline void Move(float32 posDelta) { position.y -= posDelta; }
 	};
 
 	class StaticBall : public GameObject
@@ -44,33 +45,15 @@ namespace BallsGame
 
 		float32 GetPlayerBallCollisionDistance(PlayerBall& playerBall, const float32x2& translation, float32 translationLength);
 		void CollideWithPlayerBall(float32 collisionDistance, PlayerBall& playerBall, float32x2& translation, float32 translationLength);
-		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float32 playerBallCharge);
+		float32x2 GetForceAppliedToObject(float32x2 objectPosition, float32 objectCharge);
 		void DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float32 playerBallCharge);
 		void Draw(Render2D::Batch* batch);
-	};
-
-	class Field
-	{
-	private:
-		static constexpr uint32 staticBallsLimit = 64;
-		StaticCyclicQueue<StaticBall, staticBallsLimit> staticBallsQueue;
-
-		float32 nextStaticBallsGroupSpawnDelta;
-		Charge nextStaticBallGroupCharge;
-
-		void spawnGameObjects();
-
-	public:
-		void Initialize();
-		float32x2 GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float32 playerBallCharge);
-		void CollideWithPlayerBall(PlayerBall& playerBall, float32x2 translation);
-		void UpdateAndDraw(float32 posDelta, Render2D::Batch* batch, const PlayerBall& playerBall, float32 playerBallCharge);
 	};
 
 	class Background
 	{
 	private:
-		static constexpr uint32 blursLimit = 64;
+		static constexpr uint32 blursLimit = 512;
 		struct BlurDesc
 		{
 			float32x2 position;
@@ -115,6 +98,25 @@ namespace BallsGame
 		void UpdateAndDraw(float32 posDelta, float32 timeDelta, Render2D::Batch* batch);
 	};
 
+	class Field
+	{
+	private:
+		static constexpr uint32 staticBallsLimit = 64;
+		StaticCyclicQueue<StaticBall, staticBallsLimit> staticBallsQueue;
+		float32 nextStaticBallsGroupSpawnDelta;
+		Charge nextStaticBallGroupCharge;
+		void spawnGameObjects();
+
+		PlayerBall playerBall;
+
+		float32 residualUpdateTime;
+
+	public:
+		void Initialize();
+		float32 Update(float32 timeDelta, float32x2 globalAcceleration, float32 playerBallCharge);
+		void Draw(Render2D::Batch* batch);
+	};
+
 	enum class PlayerControl
 	{
 		None, Left, Right, Up, Down,
@@ -127,7 +129,6 @@ namespace BallsGame
 		Field field;
 		Background background;
 		Hell hell;
-		PlayerBall playerBall;
 
 		struct
 		{

@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\extypes.h">
+      <Filter>Extypes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\extypes.matrix3x2.h">
+      <Filter>Extypes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\extypes.matrix4x4.h">
+      <Filter>Extypes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\extypes.vectors.h">
+      <Filter>Extypes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\extypes.vectors.math.h">
+      <Filter>Extypes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StaticCyclicQueue.h">
+      <Filter>Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\BitField.h">
+      <Filter>Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StaticList.h">
+      <Filter>Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Timer.h">
+      <Filter>Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Random.h">
+      <Filter>Lib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Compressor.h">
+      <Filter>Lib</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Random.cpp">
+      <Filter>Lib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Timer.cpp">
+      <Filter>Lib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Compressor.cpp">
+      <Filter>Lib</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Extypes">
+      <UniqueIdentifier>{caa4c554-6601-46f7-989d-c380019374da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Containers">
+      <UniqueIdentifier>{80d7ce89-7b6a-485f-b5e2-5f4927f9fb19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lib">
+      <UniqueIdentifier>{ac1d1fd5-860b-463d-81ab-c0017014b430}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

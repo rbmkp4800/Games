@@ -1,6 +1,6 @@
 #include "BallsGame.h"
 
-#include "Random.h"
+#include <Random.h>
 
 using namespace BallsGame;
 using namespace Render2D;
@@ -19,11 +19,11 @@ void Background::spawnBlurs()
 	while (nextBlurSpawnDelta <= 0.0f)
 	{
 		float32 depth = 0.3f + Random::GetFloat32(0.7f);
-		float32 radius = (0.3f + Random::GetFloat32(0.8f)) / (depth * 5.0f + 1.0f);
+		float32 radius = (0.05f + Random::GetFloat32(0.1f));
 
 		blursList.Insert(BlurDesc(float32x2(Random::GetFloat32(radius * 3.0f + 1.5f) - radius * 1.5f,
 			nextBlurSpawnDelta + blursSpawnDistance), depth, radius));
-		nextBlurSpawnDelta += Random::GetFloat32(0.3f);
+		nextBlurSpawnDelta += Random::GetFloat32(0.1f);
 	}
 }
 
@@ -35,10 +35,10 @@ void Background::Initialize()
 
 void Background::UpdateAndDraw(float32 posDelta, float32 cameraDelta, Batch* batch)
 {
-	nextBlurSpawnDelta += posDelta;
+	nextBlurSpawnDelta -= posDelta;
 	spawnBlurs();
 
-	batch->GetDevice()->Clear(backgroundColor);
+	//batch->GetDevice()->Clear(0x49A1CD_rgb);
 
 	StaticListEnumerator enumerator = blursList.GetFrontEnum();
 	while (blursList.EnumIsValid(enumerator))
@@ -50,11 +50,11 @@ void Background::UpdateAndDraw(float32 posDelta, float32 cameraDelta, Batch* bat
 			continue;
 		}
 
-		Color color = Render2D::lerp(foregroundFarColor, foregroundNearColor, sqrval(desc.depth));
-		desc.position.y += posDelta * (desc.depth * 0.7f + 0.2f);
+		Color color = Render2D::lerp(0x72C6EE_rgb, 0xADE7F8_rgb, sqrval(desc.depth));
+		desc.position.y -= posDelta * (desc.depth * 0.7f + 0.01f);
 		rectf32 circleRect = circle(desc.position, desc.radius);
-		Color innerColor(color, 224);
-		float32 focus = desc.depth * 0.7f;
+		Color innerColor(color, 128);
+		float32 focus = desc.depth * 0.9f;
 		batch->PushEllipse(circleRect, innerColor, -0.0f, focus);
 		batch->PushGradientEllipse(circleRect, innerColor, Color(color, 0), focus);
 		//batch->PushEllipse(circleRect, colors::white, 0.95, 1.0f);

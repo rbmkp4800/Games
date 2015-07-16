@@ -33,24 +33,28 @@ float32 StaticBall::GetPlayerBallCollisionDistance(PlayerBall& playerBall, const
 }
 void StaticBall::CollideWithPlayerBall(float32 collisionDistance, PlayerBall& playerBall, float32x2& translation, float32 translationLength)
 {
+	bool b = length(playerBall.position - position) <= playerBall.radius + radius;
+
 	float32x2 fallVector = translation * (collisionDistance / translationLength);
 	float32x2 normalVector = fallVector - (position - playerBall.position);
 	float32x2 reflectionVector = (translation - proj(translation, normalVector) * 2.0f) / translationLength;
 	translation = reflectionVector * (translationLength - collisionDistance);
 	playerBall.position += fallVector;
 	playerBall.speed = reflectionVector * length(playerBall.speed) * staticBallBounceSpeedReduceCoef;
+	float32 l = length(playerBall.position - position);
+	if (length(playerBall.position - position) < playerBall.radius + radius)
+	{
+		int a = 0;
+		a++;
+	}
 }
 
-float32x2 StaticBall::GetForceAppliedToPlayerBall(const PlayerBall& playerBall, float32 playerBallCharge)
+float32x2 StaticBall::GetForceAppliedToObject(float32x2 objectPosition, float32 objectCharge)
 {
-	if (charge == Charge::Positive || charge == Charge::Negative)
-	{
-		float32x2 distanceVector = position - playerBall.position;
-		float32 distance = length(distanceVector);
-		return distanceVector * (charge == Charge::Positive ? staticBallChargeAbsValue : -staticBallChargeAbsValue)
-			* playerBallCharge / (distance * distance * distance);
-	}
-	return float32x2(0.0f, 0.0f);
+	float32x2 distanceVector = position - objectPosition;
+	float32 distance = length(distanceVector);
+	return distanceVector * (charge == Charge::Positive ? staticBallChargeAbsValue : -staticBallChargeAbsValue)
+		* objectCharge / (distance * distance * distance);
 }
 
 void StaticBall::DrawForce(Render2D::Batch* batch, const PlayerBall& playerBall, float32 playerBallCharge)

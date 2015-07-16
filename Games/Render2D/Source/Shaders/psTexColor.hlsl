@@ -10,7 +10,7 @@ struct PSInput
 
 float4 main(PSInput input) : SV_TARGET
 {
-	float4 color = input.color * tex.Sample(samplerState, input.tex).x;
+	float4 color = float4(input.color.xyz, input.color.w * tex.Sample(samplerState, input.tex).x);
 	clip(color.w - 0.004f);
 	return color;
 }
